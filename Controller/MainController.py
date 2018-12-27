@@ -2,11 +2,8 @@
 
 from signal import signal, SIGINT
 
-# noinspection PyUnresolvedReferences
 from PyQt5.QtCore import Qt, pyqtSlot
-# noinspection PyUnresolvedReferences
 from PyQt5.QtGui import QIcon
-# noinspection PyUnresolvedReferences
 from PyQt5.QtWidgets import QWidget, QMenuBar, QHBoxLayout, QVBoxLayout, \
     QAction, QMessageBox, QPushButton, QSplitter
 
@@ -33,10 +30,12 @@ from .QtToolBox import QtToolBox
 __author__ = 'RoboCupULaval'
 
 
+# todo see if we can remove some noinspection in this file
+# noinspection PyUnresolvedReferences,PyArgumentList
 class MainController(QWidget):
     # TODO: Dissocier Controller de la fenêtre principale
     def __init__(self, team_color, vision_port, ui_cmd_sender_port, ui_cmd_receiver_port):
-        super().__init__()
+        super().__init__(None, Qt.Widget)
 
         self.team_color = team_color
         self.receiving_port = vision_port
@@ -174,17 +173,20 @@ class MainController(QWidget):
         # => Menu Vue
         field_menu = view_menu.addMenu('Terrain')
 
-        toggle_frame_rate = QAction("Afficher la fréquence", self, checkable=True)
+        toggle_frame_rate = QAction("Afficher la fréquence", self)
+        toggle_frame_rate.setCheckable(True)
         toggle_frame_rate.triggered.connect(self.view_field_screen.toggle_frame_rate)
         field_menu.addAction(toggle_frame_rate)
 
         field_menu.addSeparator()
 
-        flip_x_action = QAction("Changer l'axe des X", self, checkable=True)
+        flip_x_action = QAction("Changer l'axe des X", self)
+        flip_x_action.setCheckable(True)
         flip_x_action.triggered.connect(self.flip_screen_x_axe)
         field_menu.addAction(flip_x_action)
 
-        flip_y_action = QAction("Changer l'axe des Y", self, checkable=True)
+        flip_y_action = QAction("Changer l'axe des Y", self)
+        flip_y_action.setCheckable(True)
         flip_y_action.triggered.connect(self.flip_screen_y_axe)
         field_menu.addAction(flip_y_action)
 
@@ -204,28 +206,34 @@ class MainController(QWidget):
 
         bot_menu = view_menu.addMenu('Robot')
 
-        vector_action = QAction('Afficher Vecteur vitesse des robots', self, checkable=True)
+        vector_action = QAction('Afficher Vecteur vitesse des robots', self)
+        vector_action.setCheckable(True)
         vector_action.triggered.connect(self.view_field_screen.toggle_vector_option)
         bot_menu.addAction(vector_action)
 
-        nuumb_action = QAction('Afficher Numéro des robots', self, checkable=True)
+        nuumb_action = QAction('Afficher Numéro des robots', self)
+        nuumb_action.setCheckable(True)
         nuumb_action.triggered.connect(self.view_field_screen.show_number_option)
         nuumb_action.trigger()
         bot_menu.addAction(nuumb_action)
 
         view_menu.addSeparator()
 
-        fullscreen_action = QAction('Fenêtre en Plein écran', self, checkable=True)
+        fullscreen_action = QAction('Fenêtre en Plein écran', self)
+        fullscreen_action.setCheckable(True)
         fullscreen_action.triggered.connect(self.toggle_full_screen)
         fullscreen_action.setShortcut(Qt.Key_F2)
         view_menu.addAction(fullscreen_action)
 
         # => Menu Outil
-        filter_action = QAction('Filtre pour dessins', self, checkable=True)
+        filter_action = QAction('Filtre pour dessins', self)
+        filter_action.setCheckable(True)
         filter_action.triggered.connect(self.view_filter.show_hide)
         tool_menu.addAction(filter_action)
 
-        strategy_controller_action = QAction('Contrôleur de Stratégie', self, checkable=True, checked=False)
+        strategy_controller_action = QAction('Contrôleur de Stratégie', self)
+        strategy_controller_action.setCheckable(True)
+        strategy_controller_action.setChecked(False)
         strategy_controller_action.triggered.connect(self.view_controller.toggle_show_hide)
         strategy_controller_action.trigger()
         tool_menu.addAction(strategy_controller_action)
@@ -236,16 +244,19 @@ class MainController(QWidget):
         # mediaAction.triggered.connect(self.view_media.toggle_visibility)
         # toolMenu.addAction(mediaAction)
 
-        rob_state_action = QAction('État des robots', self, checkable=True)
+        rob_state_action = QAction('État des robots', self)
+        rob_state_action.setCheckable(True)
         rob_state_action.triggered.connect(self.view_robot_state.show_hide)
         rob_state_action.trigger()
         tool_menu.addAction(rob_state_action)
 
-        logger_action = QAction('Loggeur', self, checkable=True)
+        logger_action = QAction('Loggeur', self)
+        logger_action.setCheckable(True)
         logger_action.triggered.connect(self.view_logger.show_hide)
         tool_menu.addAction(logger_action)
 
-        plotter_action = QAction('Plot', self, checkable=True)
+        plotter_action = QAction('Plot', self)
+        plotter_action.setCheckable(True)
         plotter_action.triggered.connect(self.view_plotter.show_hide)
         tool_menu.addAction(plotter_action)
 
@@ -282,9 +293,11 @@ class MainController(QWidget):
         self.model_datain.write_logging_file(path, texte)
 
     def set_about_message_box(self):
+        # noinspection PyCallByClass
         QMessageBox.about(self, 'À Propos', 'ROBOCUP ULAVAL © 2016\n\ncontact@robocupulaval.com')
 
     def set_shorcuts_message_box(self):
+        # noinspection PyCallByClass
         QMessageBox.about(self, 'Raccourcis', '\n'.join(['- Double-clic droit : Placer la balle',
                                                          '- Ctrl : Entrer dans le mode slingshot',
                                                          '\n  Dans le mode slingshot :\n',
@@ -338,10 +351,9 @@ class MainController(QWidget):
         if self.view_field_screen.isVisible():
             self.view_field_screen.hide_bot(bot_id, team_color)
 
-    # noinspection PyPep8
     def update_target_on_screen(self):
         """ Interruption pour mettre à jour les données de la cible """
-        # noinspection PyBroadException
+        # noinspection PyPep8, PyBroadException
         try:
             self.view_field_screen.auto_toggle_visible_target()
         except:
