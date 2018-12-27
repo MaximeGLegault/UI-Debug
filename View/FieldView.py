@@ -1,17 +1,19 @@
 # Under MIT License, see LICENSE.txt
+import colorsys
 import logging
+from math import cos, sin, atan2, pi
 from time import time
 
+# noinspection PyUnresolvedReferences
 from PyQt5.QtCore import Qt, QMutex, QTimer, QEvent
+# noinspection PyUnresolvedReferences
 from PyQt5.QtGui import QIcon, QPainter, QPen, QColor
+# noinspection PyUnresolvedReferences
 from PyQt5.QtWidgets import QWidget, QToolBar, QAction, QSizePolicy, QApplication
 
 from Controller.DrawingObject.InfluenceMapDrawing import InfluenceMapDrawing
 from Controller.DrawingObject.MultiplePointsDrawing import MultiplePointsDrawing
 from Controller.QtToolBox import QtToolBox
-
-import colorsys
-from math import cos, sin, atan2, pi
 from Util.position import Position
 
 __author__ = 'RoboCupULaval'
@@ -25,9 +27,10 @@ class FieldView(QWidget):
 
     # Ball Slingshot
     MAX_SLINGSHOT_DISTANCE = 2000
-    SLINGSHOT_COLOR_SCALE_DISTANCE_START = 500     # Green ->
-    SLINGSHOT_COLOR_SCALE_DISTANCE_END = 1500      # -> Red
-    SLINGSHOT_DISTANCE_TO_SPEED_FACTOR = 1. / 150  # Max speed = MAX_SLINGSHOT_DISTANCE * SLINGSHOT_DISTANCE_TO_SPEED_FACTOR
+    SLINGSHOT_COLOR_SCALE_DISTANCE_START = 500  # Green ->
+    SLINGSHOT_COLOR_SCALE_DISTANCE_END = 1500  # -> Red
+    # Max speed = MAX_SLINGSHOT_DISTANCE * SLINGSHOT_DISTANCE_TO_SPEED_FACTOR
+    SLINGSHOT_DISTANCE_TO_SPEED_FACTOR = 1. / 150
     SLINGSHOT_ARROWHEAD_LENGTH = 15
     SLINGSHOT_ARROWHEAD_ANGLE = pi / 4
 
@@ -39,6 +42,8 @@ class FieldView(QWidget):
         else:
             self._logger.setLevel(logging.INFO)
         self.tool_bar = QToolBar(self)
+        self._action_lock_camera = QAction(self)
+        self._action_delete_draws = QAction(self)
         self.controller = controller
         self.last_frame = 0
         self.graph_mobs = dict()
@@ -101,12 +106,10 @@ class FieldView(QWidget):
         """ Initialisation de la barre d'outils de la vue du terrain """
         self.tool_bar.setOrientation(Qt.Horizontal)
 
-        self._action_lock_camera = QAction(self)
         self._action_lock_camera.triggered.connect(self.toggle_lock_camera)
-        #self.toggle_lock_camera()
+        # self.toggle_lock_camera()
         self.tool_bar.addAction(self._action_lock_camera)
 
-        self._action_delete_draws = QAction(self)
         self._action_delete_draws.setToolTip('Effacer tous les dessins')
         self._action_delete_draws.setIcon(QIcon('Img/map_delete.png'))
         self._action_delete_draws.triggered.connect(self.delete_all_draw)
@@ -195,13 +198,14 @@ class FieldView(QWidget):
         else:
             self.graph_draw['frame-rate'].show()
 
+    # noinspection PyMethodMayBeStatic
     def reset_camera(self):
         """ Réinitialise la position et le zoom de la caméra """
         QtToolBox.field_ctrl.reset_camera()
 
     def init_graph_mobs(self):
         """ Initialisation des objets graphiques """
-        max_robots_in_team = 16   # TODO : Variable globale?
+        max_robots_in_team = 16  # TODO : Variable globale?
 
         # Élément graphique pour les dessins
         self.graph_draw['field-ground'] = self.controller.get_drawing_object('field-ground')()
@@ -221,7 +225,6 @@ class FieldView(QWidget):
         self.graph_mobs['robots_blue'] = [self.controller.get_drawing_object('robot')(x, 'blue')
                                           for x in range(max_robots_in_team)]
 
-
         self.graph_mobs['target'] = self.controller.get_drawing_object('target')()
         # TODO : show // init setters
 
@@ -239,7 +242,7 @@ class FieldView(QWidget):
 
     def set_bot_pos(self, bot_id, team_color, x, y, theta):
         """ Modifie la position et l'orientation d'un robot sur la fenêtre du terrain """
-        if team_color =='yellow':
+        if team_color == 'yellow':
             self.graph_mobs['robots_yellow'][bot_id].setPos(x, y)
             self.graph_mobs['robots_yellow'][bot_id].setRotation(theta)
         elif team_color == 'blue':
@@ -257,7 +260,7 @@ class FieldView(QWidget):
 
     def hide_bot(self, bot_id, team_color):
         """ Cache un robot dans la fenêtre de terrain """
-        if team_color =='yellow':
+        if team_color == 'yellow':
             self.graph_mobs['robots_yellow'][bot_id].hide()
         elif team_color == 'blue':
             self.graph_mobs['robots_blue'][bot_id].hide()
@@ -347,12 +350,14 @@ class FieldView(QWidget):
         """ Récupère la fréquence de rafraîchissement de l'écran """
         return self._real_frame_rate
 
+    # noinspection PyPep8Naming
     def eventFilter(self, source, event):
         """ Gère l'événement filtré """
         if event.type() == QEvent.MouseMove:
             self._cursor_position = event.pos().x(), event.pos().y()
         return super().eventFilter(source, event)
 
+    # noinspection PyPep8Naming
     def keyPressEvent(self, event):
         if self.graph_mobs['ball'].isVisible():
             if event.key() == Qt.Key_Control:
@@ -366,6 +371,7 @@ class FieldView(QWidget):
                 if self.slingshot_distance > 0:
                     self.slingshot_distance_lock = True
 
+    # noinspection PyPep8Naming
     def keyReleaseEvent(self, event):
         if self.slingshot_mode:
             if event.key() == Qt.Key_Control:
@@ -375,6 +381,7 @@ class FieldView(QWidget):
             elif event.key() == Qt.Key_Shift:
                 self.slingshot_distance_lock = False
 
+    # noinspection PyPep8Naming
     def mousePressEvent(self, event):
         """ Gère l'événement du clic simple de la souris """
         if self.controller.get_tactic_controller_is_visible():
@@ -383,6 +390,7 @@ class FieldView(QWidget):
                 self.select_robot(robot_id, team_color)
                 self.controller.force_tactic_controller_select_robot(robot_id, team_color)
 
+    # noinspection PyPep8Naming
     def mouseDoubleClickEvent(self, event):
         """ Gère l'événement double-clic de la souris """
         if not QtToolBox.field_ctrl.camera_is_locked():
@@ -404,6 +412,7 @@ class FieldView(QWidget):
                 self.controller.model_dataout.target = (x, y)
                 self.graph_mobs['target'].setPos(x, y)
 
+    # noinspection PyPep8Naming
     def mouseReleaseEvent(self, _):
         """ Gère l'événement de relâchement de la touche de la souris """
         if self.slingshot_mode:
@@ -415,6 +424,7 @@ class FieldView(QWidget):
             self.setCursor(Qt.OpenHandCursor)
         QtToolBox.field_ctrl._cursor_last_pst = None
 
+    # noinspection PyPep8Naming
     def mouseMoveEvent(self, event):
         """ Gère l'événement du mouvement de la souris, avec une touche enfoncée et dans le mode slingshot """
         if event.buttons() == Qt.LeftButton:
@@ -425,6 +435,7 @@ class FieldView(QWidget):
             slingshot_target = QtToolBox.field_ctrl.convert_screen_to_real_pst(event.pos().x(), event.pos().y())
             self.slingshot_target = Position(slingshot_target[0], slingshot_target[1])
 
+    # noinspection PyPep8Naming
     def wheelEvent(self, event):
         """ Gère l'événement de la molette de la souris """
         print(event.angleDelta().y())
@@ -444,7 +455,9 @@ class FieldView(QWidget):
         self._real_frame_rate = int(1 / dt)
         self._real_frame_rate_last_time = current_time
 
-    def paintEvent(self, e):
+    # noinspection PyPep8Naming,PyUnusedLocal
+    # todo check if we can remove event parameters, it is not used inside the method
+    def paintEvent(self, event):
         """ Gère l'événement du signal pour dessiner les éléments du terrain """
         self.frame_rate_event()
         self.timeout_handler()
@@ -470,8 +483,10 @@ class FieldView(QWidget):
 
         # Slingshot Vector
         slingshot_vector = self.compute_slingshot_vector()
-        clamped_distance = min(max(slingshot_vector.norm, self.SLINGSHOT_COLOR_SCALE_DISTANCE_START), self.SLINGSHOT_COLOR_SCALE_DISTANCE_END)
-        hue = (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - clamped_distance) / (3.0 * (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - self.SLINGSHOT_COLOR_SCALE_DISTANCE_START))
+        clamped_distance = min(max(slingshot_vector.norm, self.SLINGSHOT_COLOR_SCALE_DISTANCE_START),
+                               self.SLINGSHOT_COLOR_SCALE_DISTANCE_END)
+        hue = (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - clamped_distance) / (
+                    3.0 * (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - self.SLINGSHOT_COLOR_SCALE_DISTANCE_START))
         color = colorsys.hsv_to_rgb(hue, 1, 255)  # hue : Green = 1/3, Red = 0
         painter.setPen(QPen(QColor(*color), 3, Qt.SolidLine))
 
