@@ -3,7 +3,7 @@
 __author__ = 'RoboCupULaval'
 
 
-class UDPConfig():
+class VisionUDPConfig:
     def __init__(self, host="224.5.23.2", port=10024):
         self._default_ip = "224.5.23.2"
         self._default_port = 10024

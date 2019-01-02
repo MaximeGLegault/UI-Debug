@@ -8,8 +8,7 @@ import socket
 import struct
 
 
-
-def getUDPHandler(receiver):
+def get_udp_handler(receiver):
     class ThreadedUDPRequestHandler(BaseRequestHandler):
         def handle(self):
             frame = self.request[0]
@@ -22,7 +21,7 @@ class ThreadedUDPServer(ThreadingMixIn, UDPServer):
     allow_reuse_address = True
 
     def __init__(self, host, port, receiver):
-        handler = getUDPHandler(receiver)
+        handler = get_udp_handler(receiver)
         super(ThreadedUDPServer, self).__init__(('', port), handler)
         self.socket.setsockopt(socket.IPPROTO_IP,
                                socket.IP_ADD_MEMBERSHIP,

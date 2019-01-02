@@ -2,25 +2,24 @@
 
 from signal import signal, SIGINT
 
-from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QWidget, QMenuBar, QHBoxLayout, QVBoxLayout, \
-    QAction, QMessageBox, QPushButton, QSplitter
+from PyQt5.QtCore import Qt
 
 from Communication.GrSimReplacementSender import GrSimReplacementSender
-from Communication.UDPConfig import UDPConfig
 from Communication.UDPServer import UDPServer
 from Communication.vision import Vision
+from Controller.ParametersSubMenuController import ParametersSubMenuController
 from Model.DataInModel import DataInModel
 from Model.DataOutModel import DataOutModel
 from Model.FrameModel import FrameModel
 from Model.RecorderModel import RecorderModel
+from Util.config import Config
 from View.FieldView import FieldView
 from View.FilterCtrlView import FilterCtrlView
 from View.GameStateView import GameStateView
 from View.LoggerView import LoggerView
+from View.MainView import MainView
 from View.MediaControllerView import MediaControllerView
-from View.ParamView import ParamView
+from View.ParametersSubMenuView import ParametersSubMenuView
 from View.PlotterView import PlotterView
 from View.StatusBarView import StatusBarView
 from View.StrategyCtrView import StrategyCtrView
@@ -31,14 +30,16 @@ __author__ = 'RoboCupULaval'
 
 
 # todo see if we can remove some noinspection in this file
-# noinspection PyUnresolvedReferences,PyArgumentList
-class MainController(QWidget):
+# noinspection PyArgumentList
+class MainController:
     # TODO: Dissocier Controller de la fenêtre principale
-    def __init__(self, team_color, vision_port, ui_cmd_sender_port, ui_cmd_receiver_port):
-        super().__init__(None, Qt.Widget)
+    def __init__(self, config: Config):
+        # super().__init__(None, Qt.Widget)
 
-        self.team_color = team_color
-        self.receiving_port = vision_port
+        self.config = config
+        self.team_color = config['COACH']['team_color']
+        # todo remove unecessary declaration of a config?
+        self.receiving_port = int(config['COMMUNICATION']['vision_port'])
 
         # Création des Contrôleurs
         self.draw_handler = DrawingObjectFactory(self)
@@ -46,11 +47,14 @@ class MainController(QWidget):
         # Communication
         self.network_data_in = UDPServer(name='UDPServer',
                                          debug=False,
-                                         rcv_port=ui_cmd_sender_port,
-                                         snd_port=ui_cmd_receiver_port)
+                                         rcv_port=int(self.config['COMMUNICATION']['ui_cmd_sender_port']),
+                                         snd_port=int(self.config['COMMUNICATION']['ui_cmd_receiver_port']))
         self.network_vision = Vision(port=self.receiving_port)
         self.ai_server_is_serial = False
-        self.udp_config = UDPConfig(port=self.receiving_port)
+
+        # todo remove once safe to do so, wasn't really used as far as i can see except to send default port/ip
+        # self.udp_config = VisionUDPConfig(port=self.receiving_port)
+
         self.grsim_sender = GrSimReplacementSender()
 
         # Création des Modèles
@@ -59,76 +63,33 @@ class MainController(QWidget):
         self.model_dataout = DataOutModel(self)
         self.model_recorder = RecorderModel()
 
+        # Création des sous-controllers
+        self.parameters_submenu_controller = ParametersSubMenuController(self, self.model_dataout,
+                                                                         self.config['COMMUNICATION'])
+
+        self.main_view = MainView(self)
+
         # Création des Vues
-        self.view_menu = QMenuBar(self)
-        self.view_logger = LoggerView(self)
-        self.view_field_screen = FieldView(self)
+        # self.view_menu = QMenuBar(self.main_view)
+        self.view_logger = LoggerView(self.main_view, self)
+        self.view_field_screen = FieldView(self.main_view, self)
         self.view_filter = FilterCtrlView(self)
-        self.view_param = ParamView(self)
-        self.view_controller = StrategyCtrView(self)
+        self.view_param = ParametersSubMenuView(self.main_view, self, self.parameters_submenu_controller)
+        self.view_controller = StrategyCtrView(self.main_view, self)
         self.view_media = MediaControllerView(self)
-        self.view_status = StatusBarView(self)
-        self.view_robot_state = GameStateView(self)
-        self.view_plotter = PlotterView(self)
+        self.view_status = StatusBarView(self.main_view, self)
+        self.view_robot_state = GameStateView(self.main_view, self)
+        self.view_plotter = PlotterView(self.main_view, self)
 
         # Initialisation des UI
         self.init_main_window()
         self.init_menubar()
         self.init_signals()
 
+        self.main_view.show()
+
         # Positions enregistrées des robots
         self.teams_formation = []
-
-    def init_main_window(self):
-        # Initialisation de la fenêtre
-        self.setWindowTitle('RoboCup ULaval | GUI Debug | Team ' + self.team_color)
-        self.setWindowIcon(QIcon('Img/favicon.jpg'))
-        self.resize(975, 550)
-
-        """
-        sub_layout (Horizontal, QSplitter)
-        ├── Robot State
-        ├── Field
-        ├── Drawing Filter
-        └── Strategy/tactic Controller
-        """
-
-        sub_layout = QSplitter(self)
-        sub_layout.setContentsMargins(0, 0, 0, 0)
-
-        field_widget = self.init_field_button_ui()
-
-        sub_layout.addWidget(self.view_robot_state)
-        sub_layout.addWidget(field_widget)
-        sub_layout.addWidget(self.view_filter)
-        sub_layout.addWidget(self.view_controller)
-        QSplitter.setSizes(sub_layout, [200, 500, 100, 100])
-
-        """ Qt Layout:
-        main
-        ├── menu
-        ├── ver_splitter
-        │     ├── sub_layout
-        │     ├── media
-        │     ├── logger
-        │     └── plotter
-        └── status
-        """
-        ver_splitter = QSplitter(Qt.Vertical, self)
-        ver_splitter.setContentsMargins(0, 0, 0, 0)
-
-        ver_splitter.addWidget(sub_layout)
-        ver_splitter.addWidget(self.view_media)
-        ver_splitter.addWidget(self.view_logger)
-        ver_splitter.addWidget(self.view_plotter)
-
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(self.view_menu)
-        main_layout.addWidget(ver_splitter)
-        main_layout.addWidget(self.view_status)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.setLayout(main_layout)
 
         # Initialisation des modèles aux vues
         self.view_logger.set_model(self.model_datain)
@@ -140,147 +101,199 @@ class MainController(QWidget):
         self.model_frame.set_recorder(self.model_recorder)
         self.model_datain.set_recorder(self.model_recorder)
 
+    def init_main_window(self):
+        # Initialisation de la fenêtre
+        # self.setWindowTitle('RoboCup ULaval | GUI Debug | Team ' + self.team_color)
+        # self.setWindowIcon(QIcon('Img/favicon.jpg'))
+        # self.resize(975, 550)
+
+        """
+        sub_layout (Horizontal, QSplitter)
+        ├── Robot State
+        ├── Field
+        ├── Drawing Filter
+        └── Strategy/tactic Controller
+        """
+
+        # sub_layout = QSplitter(self)
+        # sub_layout.setContentsMargins(0, 0, 0, 0)
+        #
+        # field_widget = self.init_field_button_ui()
+        #
+        # sub_layout.addWidget(self.view_robot_state)
+        # sub_layout.addWidget(field_widget)
+        # sub_layout.addWidget(self.view_filter)
+        # sub_layout.addWidget(self.view_controller)
+        # QSplitter.setSizes(sub_layout, [200, 500, 100, 100])
+
+        """ Qt Layout:
+        main
+        ├── menu
+        ├── ver_splitter
+        │     ├── sub_layout
+        │     ├── media
+        │     ├── logger
+        │     └── plotter
+        └── status
+        """
+        # ver_splitter = QSplitter(Qt.Vertical, self)
+        # ver_splitter.setContentsMargins(0, 0, 0, 0)
+        #
+        # ver_splitter.addWidget(sub_layout)
+        # ver_splitter.addWidget(self.view_media)
+        # ver_splitter.addWidget(self.view_logger)
+        # ver_splitter.addWidget(self.view_plotter)
+
+        # main_layout = QVBoxLayout()
+        # main_layout.addWidget(self.view_menu)
+        # main_layout.addWidget(ver_splitter)
+        # main_layout.addWidget(self.view_status)
+        # main_layout.setContentsMargins(0, 0, 0, 0)
+        #
+        # self.setLayout(main_layout)
+
     def init_menubar(self):
+        pass
         # Titre des menus et dimension
-        self.view_menu.setFixedHeight(30)
+        # self.view_menu.setFixedHeight(30)
+        #
+        # file_menu = self.view_menu.addMenu('Fichier')
+        # view_menu = self.view_menu.addMenu('Affichage')
+        # tool_menu = self.view_menu.addMenu('Outil')
+        # help_menu = self.view_menu.addMenu('Aide')
+        #
+        # # Action et entête des sous-menus
+        # # => Menu Aide
+        # shortcuts_action = QAction('Raccourcis', self)
+        # help_action = QAction('À propos', self)
+        # shortcuts_action.triggered.connect(self.set_shorcuts_message_box)
+        # help_action.triggered.connect(self.set_about_message_box)
+        # help_menu.addAction(shortcuts_action)
+        # help_menu.addAction(help_action)
+        #
+        # # => Menu Fichier
+        #
+        # param_action = QAction('Paramètres', self)
+        # param_action.triggered.connect(self.view_param.show)
+        # file_menu.addAction(param_action)
+        #
+        # file_menu.addSeparator()
+        #
+        # exit_action = QAction('Quitter', self)
+        # exit_action.triggered.connect(self.closeEvent)
+        # file_menu.addAction(exit_action)
+        #
+        # # => Menu Vue
+        # field_menu = view_menu.addMenu('Terrain')
+        #
+        # toggle_frame_rate = QAction("Afficher la fréquence", self)
+        # toggle_frame_rate.setCheckable(True)
+        # toggle_frame_rate.triggered.connect(self.view_field_screen.toggle_frame_rate)
+        # field_menu.addAction(toggle_frame_rate)
+        #
+        # field_menu.addSeparator()
+        #
+        # flip_x_action = QAction("Changer l'axe des X", self)
+        # flip_x_action.setCheckable(True)
+        # flip_x_action.triggered.connect(self.flip_screen_x_axe)
+        # field_menu.addAction(flip_x_action)
+        #
+        # flip_y_action = QAction("Changer l'axe des Y", self)
+        # flip_y_action.setCheckable(True)
+        # flip_y_action.triggered.connect(self.flip_screen_y_axe)
+        # field_menu.addAction(flip_y_action)
+        #
+        # view_menu.addSeparator()
+        #
+        # cam_menu = view_menu.addMenu('Camera')
+        #
+        # reset_cam_action = QAction("Réinitialiser la caméra", self)
+        # reset_cam_action.triggered.connect(self.view_field_screen.reset_camera)
+        # cam_menu.addAction(reset_cam_action)
+        #
+        # lock_cam_action = QAction("Bloquer la caméra", self)
+        # lock_cam_action.triggered.connect(self.view_field_screen.toggle_lock_camera)
+        # cam_menu.addAction(lock_cam_action)
+        #
+        # view_menu.addSeparator()
+        #
+        # bot_menu = view_menu.addMenu('Robot')
+        #
+        # vector_action = QAction('Afficher Vecteur vitesse des robots', self)
+        # vector_action.setCheckable(True)
+        # vector_action.triggered.connect(self.view_field_screen.toggle_vector_option)
+        # bot_menu.addAction(vector_action)
+        #
+        # nuumb_action = QAction('Afficher Numéro des robots', self)
+        # nuumb_action.setCheckable(True)
+        # nuumb_action.triggered.connect(self.view_field_screen.show_number_option)
+        # nuumb_action.trigger()
+        # bot_menu.addAction(nuumb_action)
+        #
+        # view_menu.addSeparator()
+        #
+        # fullscreen_action = QAction('Fenêtre en Plein écran', self)
+        # fullscreen_action.setCheckable(True)
+        # fullscreen_action.triggered.connect(self.toggle_full_screen)
+        # fullscreen_action.setShortcut(Qt.Key_F2)
+        # view_menu.addAction(fullscreen_action)
+        #
+        # # => Menu Outil
+        # filter_action = QAction('Filtre pour dessins', self)
+        # filter_action.setCheckable(True)
+        # filter_action.triggered.connect(self.view_filter.show_hide)
+        # tool_menu.addAction(filter_action)
+        #
+        # strategy_controller_action = QAction('Contrôleur de Stratégie', self)
+        # strategy_controller_action.setCheckable(True)
+        # strategy_controller_action.setChecked(False)
+        # strategy_controller_action.triggered.connect(self.view_controller.toggle_show_hide)
+        # strategy_controller_action.trigger()
+        # tool_menu.addAction(strategy_controller_action)
+        #
+        # tool_menu.addSeparator()
+        #
+        # # mediaAction = QAction('Contrôleur Média', self, checkable=True)
+        # # mediaAction.triggered.connect(self.view_media.toggle_visibility)
+        # # toolMenu.addAction(mediaAction)
+        #
+        # rob_state_action = QAction('État des robots', self)
+        # rob_state_action.setCheckable(True)
+        # rob_state_action.triggered.connect(self.view_robot_state.show_hide)
+        # rob_state_action.trigger()
+        # tool_menu.addAction(rob_state_action)
+        #
+        # logger_action = QAction('Loggeur', self)
+        # logger_action.setCheckable(True)
+        # logger_action.triggered.connect(self.view_logger.show_hide)
+        # tool_menu.addAction(logger_action)
+        #
+        # plotter_action = QAction('Plot', self)
+        # plotter_action.setCheckable(True)
+        # plotter_action.triggered.connect(self.view_plotter.show_hide)
+        # tool_menu.addAction(plotter_action)
 
-        file_menu = self.view_menu.addMenu('Fichier')
-        view_menu = self.view_menu.addMenu('Affichage')
-        tool_menu = self.view_menu.addMenu('Outil')
-        help_menu = self.view_menu.addMenu('Aide')
-
-        # Action et entête des sous-menus
-        # => Menu Aide
-        shortcuts_action = QAction('Raccourcis', self)
-        help_action = QAction('À propos', self)
-        shortcuts_action.triggered.connect(self.set_shorcuts_message_box)
-        help_action.triggered.connect(self.set_about_message_box)
-        help_menu.addAction(shortcuts_action)
-        help_menu.addAction(help_action)
-
-        # => Menu Fichier
-
-        param_action = QAction('Paramètres', self)
-        param_action.triggered.connect(self.view_param.show)
-        file_menu.addAction(param_action)
-
-        file_menu.addSeparator()
-
-        exit_action = QAction('Quitter', self)
-        exit_action.triggered.connect(self.closeEvent)
-        file_menu.addAction(exit_action)
-
-        # => Menu Vue
-        field_menu = view_menu.addMenu('Terrain')
-
-        toggle_frame_rate = QAction("Afficher la fréquence", self)
-        toggle_frame_rate.setCheckable(True)
-        toggle_frame_rate.triggered.connect(self.view_field_screen.toggle_frame_rate)
-        field_menu.addAction(toggle_frame_rate)
-
-        field_menu.addSeparator()
-
-        flip_x_action = QAction("Changer l'axe des X", self)
-        flip_x_action.setCheckable(True)
-        flip_x_action.triggered.connect(self.flip_screen_x_axe)
-        field_menu.addAction(flip_x_action)
-
-        flip_y_action = QAction("Changer l'axe des Y", self)
-        flip_y_action.setCheckable(True)
-        flip_y_action.triggered.connect(self.flip_screen_y_axe)
-        field_menu.addAction(flip_y_action)
-
-        view_menu.addSeparator()
-
-        cam_menu = view_menu.addMenu('Camera')
-
-        reset_cam_action = QAction("Réinitialiser la caméra", self)
-        reset_cam_action.triggered.connect(self.view_field_screen.reset_camera)
-        cam_menu.addAction(reset_cam_action)
-
-        lock_cam_action = QAction("Bloquer la caméra", self)
-        lock_cam_action.triggered.connect(self.view_field_screen.toggle_lock_camera)
-        cam_menu.addAction(lock_cam_action)
-
-        view_menu.addSeparator()
-
-        bot_menu = view_menu.addMenu('Robot')
-
-        vector_action = QAction('Afficher Vecteur vitesse des robots', self)
-        vector_action.setCheckable(True)
-        vector_action.triggered.connect(self.view_field_screen.toggle_vector_option)
-        bot_menu.addAction(vector_action)
-
-        nuumb_action = QAction('Afficher Numéro des robots', self)
-        nuumb_action.setCheckable(True)
-        nuumb_action.triggered.connect(self.view_field_screen.show_number_option)
-        nuumb_action.trigger()
-        bot_menu.addAction(nuumb_action)
-
-        view_menu.addSeparator()
-
-        fullscreen_action = QAction('Fenêtre en Plein écran', self)
-        fullscreen_action.setCheckable(True)
-        fullscreen_action.triggered.connect(self.toggle_full_screen)
-        fullscreen_action.setShortcut(Qt.Key_F2)
-        view_menu.addAction(fullscreen_action)
-
-        # => Menu Outil
-        filter_action = QAction('Filtre pour dessins', self)
-        filter_action.setCheckable(True)
-        filter_action.triggered.connect(self.view_filter.show_hide)
-        tool_menu.addAction(filter_action)
-
-        strategy_controller_action = QAction('Contrôleur de Stratégie', self)
-        strategy_controller_action.setCheckable(True)
-        strategy_controller_action.setChecked(False)
-        strategy_controller_action.triggered.connect(self.view_controller.toggle_show_hide)
-        strategy_controller_action.trigger()
-        tool_menu.addAction(strategy_controller_action)
-
-        tool_menu.addSeparator()
-
-        # mediaAction = QAction('Contrôleur Média', self, checkable=True)
-        # mediaAction.triggered.connect(self.view_media.toggle_visibility)
-        # toolMenu.addAction(mediaAction)
-
-        rob_state_action = QAction('État des robots', self)
-        rob_state_action.setCheckable(True)
-        rob_state_action.triggered.connect(self.view_robot_state.show_hide)
-        rob_state_action.trigger()
-        tool_menu.addAction(rob_state_action)
-
-        logger_action = QAction('Loggeur', self)
-        logger_action.setCheckable(True)
-        logger_action.triggered.connect(self.view_logger.show_hide)
-        tool_menu.addAction(logger_action)
-
-        plotter_action = QAction('Plot', self)
-        plotter_action.setCheckable(True)
-        plotter_action.triggered.connect(self.view_plotter.show_hide)
-        tool_menu.addAction(plotter_action)
-
-    def init_field_button_ui(self):
-        field_widget = QWidget()
-        field_layout = QVBoxLayout()
-
-        buttons_widget = QWidget()
-        buttons_layout = QHBoxLayout(field_widget)
-
-        btn_save_teams_formation = QPushButton("Save teams formation")
-        btn_save_teams_formation.clicked.connect(self.save_teams_formation)
-        btn_restore_teams_formation = QPushButton("Restore teams formation")
-        btn_restore_teams_formation.clicked.connect(self.restore_teams_formation)
-        buttons_layout.addWidget(btn_save_teams_formation)
-        buttons_layout.addWidget(btn_restore_teams_formation)
-        buttons_layout.setContentsMargins(0, 0, 0, 0)
-        buttons_widget.setLayout(buttons_layout)
-
-        field_layout.addWidget(self.view_field_screen)
-        field_layout.addWidget(buttons_widget)
-        field_widget.setLayout(field_layout)
-
-        return field_widget
+    # def init_field_button_ui(self):
+    #     field_widget = QWidget()
+    #     field_layout = QVBoxLayout()
+    #
+    #     buttons_widget = QWidget()
+    #     buttons_layout = QHBoxLayout(field_widget)
+    #
+    #     btn_save_teams_formation = QPushButton("Save teams formation")
+    #     btn_save_teams_formation.clicked.connect(self.save_teams_formation)
+    #     btn_restore_teams_formation = QPushButton("Restore teams formation")
+    #     btn_restore_teams_formation.clicked.connect(self.restore_teams_formation)
+    #     buttons_layout.addWidget(btn_save_teams_formation)
+    #     buttons_layout.addWidget(btn_restore_teams_formation)
+    #     buttons_layout.setContentsMargins(0, 0, 0, 0)
+    #     buttons_widget.setLayout(buttons_layout)
+    #
+    #     field_layout.addWidget(self.view_field_screen)
+    #     field_layout.addWidget(buttons_widget)
+    #     field_widget.setLayout(field_layout)
+    #
+    #     return field_widget
 
     def init_signals(self):
         # noinspection PyTypeChecker
@@ -292,27 +305,10 @@ class MainController(QWidget):
     def save_logging(self, path, texte):
         self.model_datain.write_logging_file(path, texte)
 
-    def set_about_message_box(self):
-        # noinspection PyCallByClass
-        QMessageBox.about(self, 'À Propos', 'ROBOCUP ULAVAL © 2016\n\ncontact@robocupulaval.com')
-
-    def set_shorcuts_message_box(self):
-        # noinspection PyCallByClass
-        QMessageBox.about(self, 'Raccourcis', '\n'.join(['- Double-clic droit : Placer la balle',
-                                                         '- Ctrl : Entrer dans le mode slingshot',
-                                                         '\n  Dans le mode slingshot :\n',
-                                                         '- Shift : Verrouiller la force du tir',
-                                                         '- Clic gauche pour tirer la balle']))
-
-    # noinspection PyPep8Naming,PyUnusedLocal
-    @pyqtSlot(name='on_triggered')
-    def closeEvent(self, event):
-        self.close()
-
     # noinspection PyUnusedLocal
     def signal_handle(self, *args):
         """ Responsable du traitement des signaux """
-        self.close()
+        self.main_view.close()
 
     def resize_window(self):
         # self.setFixedSize(self.minimumSizeHint())
@@ -325,7 +321,7 @@ class MainController(QWidget):
             qt_draw = self.draw_handler.get_qt_draw_object(draw)
             if qt_draw is not None:
                 self.view_field_screen.load_draw(qt_draw)
-        except:
+        except Exception:
             # todo get rid of this too broad exception
             pass
 
@@ -356,7 +352,7 @@ class MainController(QWidget):
         # noinspection PyPep8, PyBroadException
         try:
             self.view_field_screen.auto_toggle_visible_target()
-        except:
+        except Exception:
             # todo get rid of this too broad exception
             pass
 
@@ -461,11 +457,13 @@ class MainController(QWidget):
                                 self.network_vision.get_port()]))
         self.model_dataout.send_server(server_info)
 
-    def send_udp_config(self):
-        udp_config_info = dict(zip(['ip', 'port'],
-                                   [self.udp_config.ip,
-                                    self.udp_config.port]))
-        self.model_dataout.send_udp_config(udp_config_info)
+    # todo remove for real
+    # moved to ParamtetersSubMenuController
+    # def send_udp_config(self):
+    #     udp_config_info = dict(zip(['ip', 'port'],
+    #                                [self.udp_config.ip,
+    #                                 self.udp_config.port]))
+    #     self.model_dataout.send_udp_config(udp_config_info)
 
     def send_geometry(self):
         """ Envoie la géométrie du terrain """

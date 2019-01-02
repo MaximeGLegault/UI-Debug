@@ -1,4 +1,5 @@
 # Under GNU GPLv3 License, see LICENSE.txt
+# todo change license of this type everywhere in the code to our own
 
 from time import time
 from Controller.AbstractDrawingObject import AbstractDrawingObject

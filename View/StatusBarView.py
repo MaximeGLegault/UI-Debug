@@ -8,8 +8,8 @@ __author__ = 'RoboCupULaval'
 
 
 class StatusBarView(QWidget):
-    def __init__(self, controller):
-        super().__init__(controller)
+    def __init__(self, parent, controller):
+        super().__init__(parent)
 
         self._controller = controller
         self._update_timer = QTimer()

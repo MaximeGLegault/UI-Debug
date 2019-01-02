@@ -17,8 +17,8 @@ __author__ = 'RoboCupULaval'
 
 class GameStateView(QWidget):
 
-    def __init__(self, controller=None, debug=False):
-        super().__init__(controller)
+    def __init__(self, parent, controller, debug=False):
+        super().__init__(parent)
         self._logger = logging.getLogger(GameStateView.__name__)
         if debug:
             self._logger.setLevel(logging.DEBUG)

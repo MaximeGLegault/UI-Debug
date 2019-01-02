@@ -2,13 +2,12 @@
 
 import argparse
 import sys
-from configparser import ParsingError, ConfigParser
-from typing import Dict
 
 # noinspection PyUnresolvedReferences
 from PyQt5.QtWidgets import QApplication
 
 from Controller.MainController import MainController
+from Util.config import Config
 
 __author__ = 'RoboCupULaval'
 
@@ -24,33 +23,13 @@ def argument_parser() -> argparse.Namespace:
     return args_
 
 
-def load_config(path) -> Dict:
-    config_parser = ConfigParser(allow_no_value=False)
-    try:
-        print("Loading", path, " port configuration file.")
-        config_parser.read_file(open(path))
-    except FileNotFoundError:
-        raise RuntimeError("Impossible de lire le fichier de configuration.")
-    except ParsingError:
-        raise RuntimeError("Le fichier de configuration est mal configuré.\nExiting!")
-
-    return {s: dict(config_parser.items(s)) for s in config_parser.sections()}["COMMUNICATION"]
-
-
 if __name__ == '__main__':
     args = argument_parser()
     app = QApplication(sys.argv)
 
-    config = load_config(args.path_field_config)
+    config = Config(args.path_field_config, args.team_color)
 
-    # DO NOT TOUCH EVER THEY ARE HARDCODED BOTH IN THE IA AND IN UI-DEBUG
-    if args.team_color == "blue":
-        ui_cmd_sender_port = 14444  # DO NOT TOUCH
-        ui_cmd_receiver_port = 15555  # DO NOT TOUCH
-    else:
-        ui_cmd_sender_port = 16666  # DO NOT TOUCH
-        ui_cmd_receiver_port = 17777  # DO NOT TOUCH
-
-    f = MainController(args.team_color, int(config["vision_port"]), ui_cmd_sender_port, ui_cmd_receiver_port)
-    f.show()
+    # todo pretty up when done
+    f = MainController(config)  # args.team_color, int(config["vision_port"]), ui_cmd_sender_port, ui_cmd_receiver_port)
+    # f.show()
     sys.exit(app.exec())

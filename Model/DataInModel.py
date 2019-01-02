@@ -38,7 +38,7 @@ class DataInModel(Thread):
         self._recorder = None
         self._recorder_is_enable = False
 
-        self._team_color = 'blue' #TODO Faire fonctionner l'update auto de l'IA
+        self._team_color = 'blue'  # TODO Faire fonctionner l'update auto de l'IA
 
         # Stockage de données
         self._data_logging = list()
@@ -92,7 +92,6 @@ class DataInModel(Thread):
         self._data_draw['robots_yellow'] = [list() for _ in range(16)]
         self._data_draw['robots_blue'] = [list() for _ in range(16)]
         self._logger.debug('INIT: object')
-
 
     def _init_distributor(self):
         """ Initialise la distribution des paquets en fonction du type de paquet """

@@ -3,6 +3,7 @@
 from math import cos, sin, atan2, sqrt, pi
 
 from Communication.messages_robocup_ssl_geometry_pb2 import SSL_GeometryFieldSize
+from Util.singleton import Singleton
 
 __author__ = 'RoboCupULaval'
 
@@ -34,11 +35,12 @@ class FieldLineSegment:
         return "p1:{}, p2:{}".format(self.p1, self.p2)
 
 
-class FieldController(object):
+# todo get rid of singleton. It is a singleton just so we can break the singleton that was inside QtToolBox. Eventually,
+# it shouldn't be a singleton at all.
+class FieldController(metaclass=Singleton):
     """ La classe Field représente les informations relatives au terrain et ce qui s'y trouve """
 
     def __init__(self):
-        self.type = 0
 
         # Paramètre caméra
         self._camera_position = [0, 0]
@@ -186,6 +188,7 @@ class FieldController(object):
                 self._cursor_last_pst = x, y
                 self._limit_camera()
 
+    # noinspection PyTypeChecker
     def _limit_camera(self):
         """ Limite le déplacement de la caméra à la taille du terrain """
         max_width, max_height = self.get_size_to_screen()
@@ -230,7 +233,8 @@ class FieldController(object):
     def set_field_size(self, field: SSL_GeometryFieldSize):
         if len(field.field_lines) == 0:
             raise RuntimeError(
-                "Receiving legacy geometry message instead of the new geometry message. Update your grsim or check your vision port.")
+                "Receiving legacy geometry message instead of the new "
+                "geometry message. Update your grsim or check your vision port.")
 
         self._set_field_size_new(field)
 
@@ -259,8 +263,10 @@ class FieldController(object):
         self._center_circle_radius = self.field_arcs['CenterCircle'].radius
         self._defense_stretch = self.field_lines['LeftPenaltyStretch'].length / 2
 
+    # noinspection PyMethodMayBeStatic
     def _convert_field_circular_arc(self, field_arcs):
         return {arc.name: FieldCircularArc(arc) for arc in field_arcs}
 
+    # noinspection PyMethodMayBeStatic
     def _convert_field_line_segments(self, field_lines):
         return {line.name: FieldLineSegment(line) for line in field_lines}

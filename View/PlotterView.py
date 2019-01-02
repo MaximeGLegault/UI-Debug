@@ -25,8 +25,8 @@ class PlotterView(QWidget):
         5: Color.BLUE
     }
 
-    def __init__(self, controller=None):
-        QWidget.__init__(self, controller)
+    def __init__(self, parent, controller):
+        QWidget.__init__(self, parent)
         self._controller = controller
 
         self.model_datain = None

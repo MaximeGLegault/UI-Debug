@@ -16,18 +16,18 @@ from Model.DataInModel import DataInModel
 __author__ = 'RoboCupULaval'
 
 
+# noinspection PyArgumentList,PyUnresolvedReferences
 class LoggerView(QWidget):
-    def __init__(self, controller=None):
-        QWidget.__init__(self, controller)
+    def __init__(self, parent, controller):
+        QWidget.__init__(self, parent)
         self._controller = controller
+
         self._queue_string_log = []
-        self._widget_logger = QTextEdit(self)
 
         self._model = None
         self._count = 0
         self._max_logger_line = 10
         self.pause = False
-        self.init_ui()
 
         # Mutex
         self._mutex = QMutex()
@@ -36,6 +36,18 @@ class LoggerView(QWidget):
         self._timer_update = QTimer()
         self._timer_update.timeout.connect(self.update_logger)
         self._timer_update.start(100)
+
+        self._widget_logger = QTextEdit(self)
+        self.filter_crit = QCheckBox('Critical')
+        self.filter_err = QCheckBox('Error')
+        self.filter_warn = QCheckBox('Warning')
+        self.filter_info = QCheckBox('Info')
+        self.filter_debug = QCheckBox('Debug')
+        self.btn_clear = QPushButton()
+        self.btn_save = QPushButton()
+        self.btn_refresh_data = QPushButton()
+        self.btn_media_ctrl = QPushButton()
+        self.init_ui()
 
     def update_logger(self):
         if not self.pause:
@@ -47,7 +59,6 @@ class LoggerView(QWidget):
             finally:
                 QMutexLocker(self._mutex).unlock()
 
-
     def init_ui(self):
         self._widget_logger.setReadOnly(True)
         layout = QHBoxLayout()
@@ -58,15 +69,10 @@ class LoggerView(QWidget):
         layout_filter = QVBoxLayout()
         layout_filter.setContentsMargins(0, 0, 0, 0)
         group_box.setLayout(layout_filter)
-        self.filter_debug = QCheckBox('Debug')
         self.filter_debug.setChecked(True)
-        self.filter_info = QCheckBox('Info')
         self.filter_info .setChecked(True)
-        self.filter_warn = QCheckBox('Warning')
         self.filter_warn.setChecked(True)
-        self.filter_err = QCheckBox('Error')
         self.filter_err.setChecked(True)
-        self.filter_crit = QCheckBox('Critical')
         self.filter_crit.setChecked(True)
         layout_filter.addWidget(self.filter_debug)
         layout_filter.addWidget(self.filter_info)
@@ -76,14 +82,12 @@ class LoggerView(QWidget):
         layout_ctrl.addWidget(group_box)
 
         layout_btn = QHBoxLayout()
-        self.btn_media_ctrl = QPushButton()
         self.btn_media_ctrl.setIcon(QIcon('Img/control_pause.png'))
         self.btn_media_ctrl.setIconSize(QSize(16, 16))
         self.btn_media_ctrl.setToolTip('Lecture/Pause')
-        self.btn_media_ctrl.clicked.connect(self.pauseEvent)
+        self.btn_media_ctrl.clicked.connect(self.pause_event)
         layout_btn.addWidget(self.btn_media_ctrl)
 
-        self.btn_refresh_data = QPushButton()
         self.btn_refresh_data.setIcon(QIcon('Img/database_refresh.png'))
         self.btn_refresh_data.setIconSize(QSize(16, 16))
         self.btn_refresh_data.setToolTip('Recharger tout')
@@ -91,7 +95,6 @@ class LoggerView(QWidget):
         self.btn_refresh_data.clicked.connect(self.reload_all_database)
         layout_btn.addWidget(self.btn_refresh_data)
 
-        self.btn_save = QPushButton()
         self.btn_save.setIcon(QIcon('Img/disk.png'))
         self.btn_save.setIconSize(QSize(16, 16))
         self.btn_save.setToolTip('Sauvegarder')
@@ -100,7 +103,6 @@ class LoggerView(QWidget):
         layout_btn.addWidget(self.btn_save)
         layout_ctrl.addLayout(layout_btn)
 
-        self.btn_clear = QPushButton()
         self.btn_clear.setIcon(QIcon('Img/table_delete.png'))
         self.btn_clear.setIconSize(QSize(16, 16))
         self.btn_clear.setToolTip('Effacer')
@@ -115,7 +117,7 @@ class LoggerView(QWidget):
         self.setLayout(layout)
         self.hide()
 
-    def pauseEvent(self):
+    def pause_event(self):
         self.pause = not self.pause
         if self.pause:
             self.btn_media_ctrl.setIcon(QIcon('Img/control_play.png'))
@@ -146,11 +148,12 @@ class LoggerView(QWidget):
                                3: self.filter_warn,
                                4: self.filter_err,
                                5: self.filter_crit}
+        # noinspection PyBroadException
         try:
             if link_level_checkbox[logging.data['level']].isChecked():
                 return True
             return False
-        except Exception as e:
+        except Exception:
             return False
 
     def set_model(self, model):
@@ -176,12 +179,14 @@ class LoggerView(QWidget):
         return self._count
 
     def clear(self):
+        # noinspection PyCallByClass
         reply = QMessageBox.question(self, 'Suppression de la fil', 'Êtes-vous sûr de vouloir effacer la fil de'
                                      ' logging ?  ', QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self._widget_logger.clear()
 
     def save(self):
+        # noinspection PyCallByClass
         path = QFileDialog.getSaveFileName(self, 'Enregistrer sous', '', '.txt')
         self._controller.write_logging_file(path, self._widget_logger.toPlainText())
 

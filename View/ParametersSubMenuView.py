@@ -1,107 +1,114 @@
 # Under MIT License, see LICENSE.txt
-
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTabWidget, QWidget, \
-                            QGroupBox, QFormLayout, QLineEdit, QLabel, \
-                            QPushButton, QHBoxLayout, QRadioButton
 from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTabWidget, QWidget, \
+    QGroupBox, QFormLayout, QLineEdit, QLabel, \
+    QPushButton, QHBoxLayout, QRadioButton
+
+from Controller import MainController, ParametersSubMenuController
 from Controller.QtToolBox import QtToolBox
 
 __author__ = 'RoboCupULaval'
 
 
-class ParamView(QDialog):
-    def __init__(self, controller):
-        self._ctrl = controller
-        super().__init__(controller)
+class ParametersSubMenuView(QDialog):
+    def __init__(self, parent, controller: MainController,
+                 own_controller: ParametersSubMenuController):
+        super().__init__(parent, Qt.Dialog)
+        self._controller = controller
+        self._own_controller = own_controller
         self._layout = QVBoxLayout()
-        self._pages = QTabWidget(self)
-        self._page_dimension = QWidget(self)
-        self._page_network = QWidget(self)
+        self.tabs_widget = QTabWidget(self)
+        self._dimensions_tab = QWidget(self, Qt.Widget)
+        self._network_tab = QWidget(self, Qt.Widget)
         self.init_ui()
-        self.init_page_network()
-        self.init_page_dimension()
+        self.init_network_tab()
+        self.init_dimension_tab()
         self.init_bottom_page()
 
+    # noinspection PyArgumentList
     def init_ui(self):
-        self._layout.addWidget(self._pages)
-        self._pages.addTab(self._page_dimension, 'Dimensions')
-        self._pages.addTab(self._page_network, 'Réseau')
+        self._layout.addWidget(self.tabs_widget)
+        self.tabs_widget.addTab(self._dimensions_tab, 'Dimensions')
+        self.tabs_widget.addTab(self._network_tab, 'Réseau')
 
         self.setWindowTitle('Paramètres')
         self.move(150, 150)
         self.setLayout(self._layout)
 
-    def init_page_network(self):
-        layout_main = QVBoxLayout(self._page_network)
-        layout_main.setAlignment(QtCore.Qt.AlignTop)
-        self._page_network.setLayout(layout_main)
+    # noinspection PyAttributeOutsideInit,PyUnresolvedReferences,PyArgumentList
+    def init_network_tab(self):
+        network_tab_main_layout = QVBoxLayout(self._network_tab)
+        network_tab_main_layout.setAlignment(QtCore.Qt.AlignTop)
+        self._network_tab.setLayout(network_tab_main_layout)
 
         # PARAM UI Server
-        group_server = QGroupBox('UI Server')
-        layout_main.addWidget(group_server)
-        layout_form = QFormLayout()
-        group_server.setLayout(layout_form)
+        ui_server_box = QGroupBox('UI Server')
+        network_tab_main_layout.addWidget(ui_server_box)
+        ui_server_box_form_layout = QFormLayout()
+        ui_server_box.setLayout(ui_server_box_form_layout)
 
-        # => Port rcv
-        self.form_network_recv_port = QLineEdit()
-        layout_form.addRow(QLabel("Port de réception :"), self.form_network_recv_port)
-        # => Port snd
-        self.form_network_send_port = QLineEdit()
-        layout_form.addRow(QLabel("Port d'envoi :"), self.form_network_send_port)
+        # => network ui server receiving port
+        self.network_ui_server_receiving_port = QLineEdit()
+        ui_server_box_form_layout.addRow(QLabel("Port de réception :"), self.network_ui_server_receiving_port)
+        # => network ui server sending port
+        self.network_ui_server_sending_port = QLineEdit()
+        ui_server_box_form_layout.addRow(QLabel("Port d'envoi :"), self.network_ui_server_sending_port)
         # => Bouton envoie des ports recv et send
-        but_send_ports_rs = QPushButton('Envoyer les paramètres')
-        but_send_ports_rs.clicked.connect(self._ctrl.send_ports_rs)
-        layout_form.addRow(but_send_ports_rs)
+        button_send_ports_ui_server = QPushButton('Envoyer les paramètres')
+        button_send_ports_ui_server.clicked.connect(self._controller.send_ports_rs)
+        ui_server_box_form_layout.addRow(button_send_ports_ui_server)
 
         # PARAM VISION
-        group_vision = QGroupBox('Vision')
-        layout_main.addWidget(group_vision)
-        layout_form = QFormLayout()
-        group_vision.setLayout(layout_form)
+        group_vision_box = QGroupBox('Vision')
+        network_tab_main_layout.addWidget(group_vision_box)
+        ui_server_box_form_layout = QFormLayout()
+        group_vision_box.setLayout(ui_server_box_form_layout)
 
         # => IP
-        self.form_network_vision_ip = QLineEdit()
-        layout_form.addRow(QLabel("IP :"), self.form_network_vision_ip)
+        self.network_vision_ip_address = QLineEdit()
+        ui_server_box_form_layout.addRow(QLabel("IP :"), self.network_vision_ip_address)
 
         # => Port
-        self.form_network_vision_port = QLineEdit()
-        layout_form.addRow(QLabel("Port :"), self.form_network_vision_port)
+        self.network_vision_port = QLineEdit()
+        ui_server_box_form_layout.addRow(QLabel("Port :"), self.network_vision_port)
 
         # => UDP/Serial
-        self.form_network_vision_udp = QRadioButton()
-        self.form_network_vision_udp.setChecked(True)
-        self.form_network_vision_udp_label = QLabel("UDP :")
-        layout_form.addRow(self.form_network_vision_udp_label, self.form_network_vision_udp)
+        self.radiobox_vision_udp = QRadioButton()
+        self.radiobox_vision_udp.setChecked(True)
+        self.radiobox_vision_udp_label = QLabel("UDP :")
+        ui_server_box_form_layout.addRow(self.radiobox_vision_udp_label, self.radiobox_vision_udp)
 
-        self.form_network_vision_serial = QRadioButton()
-        self.form_network_vision_serial.toggled.connect(self.toggle_udp_config)
-        layout_form.addRow(QLabel("Serial :"), self.form_network_vision_serial)
+        self.radiobox_vision_serial = QRadioButton()
+        self.radiobox_vision_serial.toggled.connect(self.toggle_udp_config)
+        ui_server_box_form_layout.addRow(QLabel("Serial :"), self.radiobox_vision_serial)
 
-        but_send_server = QPushButton('Envoyer les paramètres du réseau')
-        but_send_server.clicked.connect(self._ctrl.send_server)
-        layout_form.addRow(but_send_server)
+        button_send_vision_serveur_infos = QPushButton('Envoyer les paramètres du réseau')
+        button_send_vision_serveur_infos.clicked.connect(self._controller.send_server)
+        ui_server_box_form_layout.addRow(button_send_vision_serveur_infos)
 
         # PARAM UI Server
         group_udp_serial = QGroupBox('Configuration UDP/Serial')
-        layout_main.addWidget(group_udp_serial)
-        layout_form = QFormLayout()
-        group_udp_serial.setLayout(layout_form)
+        network_tab_main_layout.addWidget(group_udp_serial)
+        ui_server_box_form_layout = QFormLayout()
+        group_udp_serial.setLayout(ui_server_box_form_layout)
 
         # => IP Multicast UDP
         self.form_udp_multicast_ip = QLineEdit()
-        layout_form.addRow(QLabel("IP Multicast:"), self.form_udp_multicast_ip)
+        ui_server_box_form_layout.addRow(QLabel("IP Multicast:"), self.form_udp_multicast_ip)
         # => Port Multicast UDP
         self.form_udp_multicast_port = QLineEdit()
-        layout_form.addRow(QLabel("Port Multicast:"), self.form_udp_multicast_port)
+        ui_server_box_form_layout.addRow(QLabel("Port Multicast:"), self.form_udp_multicast_port)
         # => Bouton envoie configuration UDP
+        # todo ask about button to send configuration
         but_send_udp_multicast = QPushButton('Envoyer les paramètres de l\'UDP')
-        but_send_udp_multicast.clicked.connect(self._ctrl.send_udp_config)
-        layout_form.addRow(but_send_udp_multicast)
+        but_send_udp_multicast.clicked.connect(self._own_controller.send_udp_config)
+        ui_server_box_form_layout.addRow(but_send_udp_multicast)
 
-
-    def init_page_dimension(self):
-        layout_main = QVBoxLayout(self._page_dimension)
-        self._page_dimension.setLayout(layout_main)
+    # noinspection PyAttributeOutsideInit,PyUnresolvedReferences,PyArgumentList
+    def init_dimension_tab(self):
+        layout_main = QVBoxLayout(self._dimensions_tab)
+        self._dimensions_tab.setLayout(layout_main)
 
         # Changement des dimensions du terrain
         group_field = QGroupBox('Dimensions')
@@ -143,9 +150,10 @@ class ParamView(QDialog):
         self.restore_values()
 
         but_send_geometry = QPushButton('Envoyer la Géométrie du terrain')
-        but_send_geometry.clicked.connect(self._ctrl.send_geometry)
+        but_send_geometry.clicked.connect(self._controller.send_geometry)
         layout_field.addRow(but_send_geometry)
 
+    # noinspection PyArgumentList,PyUnresolvedReferences
     def init_bottom_page(self):
         # Bas de fenêtre
         layout_bottom = QHBoxLayout()
@@ -181,15 +189,15 @@ class ParamView(QDialog):
         self.form_ratio_mobs.setText(str(QtToolBox.field_ctrl.ratio_field_mobs_default))
 
         # NETWORK
-        self.form_network_recv_port.setText(str(self._ctrl.network_data_in.get_default_rcv_port()))
-        self.form_network_send_port.setText(str(self._ctrl.network_data_in.get_default_snd_port()))
-        self.form_network_vision_ip.setText(str(self._ctrl.network_vision.get_default_ip()))
-        self.form_network_vision_port.setText(str(self._ctrl.network_vision.get_default_port()))
-        self.form_network_vision_serial.setChecked(False)
-        self.form_network_vision_udp.setChecked(True)
-        self.form_udp_multicast_ip.setText(str(self._ctrl.udp_config.get_default_ip()))
+        self.network_ui_server_receiving_port.setText(str(self._controller.network_data_in.get_default_rcv_port()))
+        self.network_ui_server_sending_port.setText(str(self._controller.network_data_in.get_default_snd_port()))
+        self.network_vision_ip_address.setText(str(self._controller.network_vision.get_default_ip()))
+        self.network_vision_port.setText(str(self._controller.network_vision.get_default_port()))
+        self.radiobox_vision_serial.setChecked(False)
+        self.radiobox_vision_udp.setChecked(True)
+        self.form_udp_multicast_ip.setText(str(self._own_controller.default_vision_ip_address))
         self.form_udp_multicast_ip.setDisabled(False)
-        self.form_udp_multicast_port.setText(str(self._ctrl.udp_config.get_default_port()))
+        self.form_udp_multicast_port.setText(str(self._own_controller.default_vision_port))
         self.form_udp_multicast_port.setDisabled(False)
 
         self._apply_param()
@@ -208,15 +216,15 @@ class ParamView(QDialog):
 
         self.form_ratio_mobs.setText(str(QtToolBox.field_ctrl.ratio_field_mobs))
 
-        self.form_network_recv_port.setText(str(self._ctrl.network_data_in.get_rcv_port()))
-        self.form_network_send_port.setText(str(self._ctrl.network_data_in.get_snd_port()))
-        self.form_network_vision_ip.setText(str(self._ctrl.network_vision.get_ip()))
-        self.form_network_vision_port.setText(str(self._ctrl.network_vision.get_port()))
-        self.form_udp_multicast_ip.setText(str(self._ctrl.udp_config.ip))
-        self.form_udp_multicast_port.setText(str(self._ctrl.udp_config.port))
+        self.network_ui_server_receiving_port.setText(str(self._controller.network_data_in.get_rcv_port()))
+        self.network_ui_server_sending_port.setText(str(self._controller.network_data_in.get_snd_port()))
+        self.network_vision_ip_address.setText(str(self._controller.network_vision.get_ip()))
+        self.network_vision_port.setText(str(self._controller.network_vision.get_port()))
+        self.form_udp_multicast_ip.setText(str(self._controller.config['COMMUNICATION']['vision_address']))
+        self.form_udp_multicast_port.setText(str(self._controller.config['COMMUNICATION']['vision_port']))
 
     def toggle_udp_config(self):
-        if self.form_network_vision_serial.isChecked():
+        if self.radiobox_vision_serial.isChecked():
             self.form_udp_multicast_ip.setDisabled(True)
             self.form_udp_multicast_port.setDisabled(True)
         else:
@@ -228,6 +236,7 @@ class ParamView(QDialog):
         self._apply_param()
         super().hide()
 
+    # noinspection PyBroadException,PyUnusedLocal
     def _apply_param(self):
         is_wrong = False
         style_bad = "QLineEdit {background: rgb(255, 100, 100)}"
@@ -291,48 +300,48 @@ class ParamView(QDialog):
             is_wrong = True
 
         try:
-            self.form_network_recv_port.setStyleSheet(style_good)
-            if not self._ctrl.network_data_in.get_rcv_port() == int(self.form_network_recv_port.text()):
-                self._ctrl.network_data_in.new_rcv_connexion(int(self.form_network_recv_port.text()))
+            self.network_ui_server_receiving_port.setStyleSheet(style_good)
+            if not self._controller.network_data_in.get_rcv_port() == int(self.network_ui_server_receiving_port.text()):
+                self._controller.network_data_in.new_rcv_connexion(int(self.network_ui_server_receiving_port.text()))
         except Exception as e:
-            self.form_network_recv_port.setStyleSheet(style_bad)
+            self.network_ui_server_receiving_port.setStyleSheet(style_bad)
             is_wrong = True
 
         try:
-            self.form_network_send_port.setStyleSheet(style_good)
-            if not self._ctrl.network_data_in.get_snd_port() == int(self.form_network_send_port.text()):
-                self._ctrl.network_data_in.set_snd_port(int(self.form_network_send_port.text()))
+            self.network_ui_server_sending_port.setStyleSheet(style_good)
+            if not self._controller.network_data_in.get_snd_port() == int(self.network_ui_server_sending_port.text()):
+                self._controller.network_data_in.set_snd_port(int(self.network_ui_server_sending_port.text()))
         except Exception as e:
-            self.form_network_send_port.setStyleSheet(style_bad)
+            self.network_ui_server_sending_port.setStyleSheet(style_bad)
             is_wrong = True
 
         try:
-            self.form_network_vision_ip.setStyleSheet(style_good)
-            self.form_network_recv_port.setStyleSheet(style_good)
-            if not self._ctrl.network_vision.get_ip() == str(self.form_network_vision_ip.text()) \
-                or not self._ctrl.network_vision.get_port() == int(self.form_network_vision_port.text()):
-                self._ctrl.network_vision.set_new_connexion(str(self.form_network_vision_ip.text()),
-                                                            int(self.form_network_vision_port.text()))
+            self.network_vision_ip_address.setStyleSheet(style_good)
+            self.network_ui_server_receiving_port.setStyleSheet(style_good)
+            if not self._controller.network_vision.get_ip() == str(self.network_vision_ip_address.text()) \
+                    or not self._controller.network_vision.get_port() == int(self.network_vision_port.text()):
+                self._controller.network_vision.set_new_connexion(str(self.network_vision_ip_address.text()),
+                                                                  int(self.network_vision_port.text()))
         except Exception as e:
-            self.form_network_vision_ip.setStyleSheet(style_bad)
-            self.form_network_vision_port.setStyleSheet(style_bad)
+            self.network_vision_ip_address.setStyleSheet(style_bad)
+            self.network_vision_port.setStyleSheet(style_bad)
             is_wrong = True
 
         try:
-            self.form_network_vision_serial.setStyleSheet(style_good)
-            self.form_network_vision_udp_label.setStyleSheet(style_good)
-            if self._ctrl.get_is_serial != self.form_network_vision_serial.isChecked():
-                self._ctrl.set_is_serial(self.form_network_vision_serial.isChecked())
+            self.radiobox_vision_serial.setStyleSheet(style_good)
+            self.radiobox_vision_udp_label.setStyleSheet(style_good)
+            if self._controller.get_is_serial != self.radiobox_vision_serial.isChecked():
+                self._controller.set_is_serial(self.radiobox_vision_serial.isChecked())
             self.toggle_udp_config()
         except Exception as e:
-            self.form_network_vision_serial.setStyleSheet(style_bad)
-            self.form_network_vision_udp_label.setStyleSheet(style_bad)
+            self.radiobox_vision_serial.setStyleSheet(style_bad)
+            self.radiobox_vision_udp_label.setStyleSheet(style_bad)
             is_wrong = True
 
         try:
             self.form_udp_multicast_ip.setStyleSheet(style_good)
-            if self._ctrl.udp_config.ip != str(self.form_udp_multicast_ip.text()):
-                self._ctrl.udp_config.ip = self.form_udp_multicast_ip.text()
+            if self._own_controller.default_vision_ip_address != str(self.form_udp_multicast_ip.text()):
+                self._own_controller.default_vision_ip_address = self.form_udp_multicast_ip.text()
             self.toggle_udp_config()
         except Exception as e:
             self.form_udp_multicast_ip.setStyleSheet(style_bad)
@@ -340,8 +349,8 @@ class ParamView(QDialog):
 
         try:
             self.form_udp_multicast_port.setStyleSheet(style_good)
-            if self._ctrl.udp_config.port != str(self.form_udp_multicast_port.text()):
-                self._ctrl.udp_config.port = self.form_udp_multicast_port.text()
+            if self._own_controller.default_vision_port != str(self.form_udp_multicast_port.text()):
+                self._own_controller.default_vision_port = self.form_udp_multicast_port.text()
         except Exception as e:
             self.form_udp_multicast_port.setStyleSheet(style_bad)
             is_wrong = True

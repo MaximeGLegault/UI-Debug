@@ -19,6 +19,7 @@ from Util.position import Position
 __author__ = 'RoboCupULaval'
 
 
+# noinspection PyArgumentList,PyUnresolvedReferences
 class FieldView(QWidget):
     """
     FieldView est un QWidget qui représente la vue du terrain et des éléments qui y sont associés.
@@ -34,17 +35,19 @@ class FieldView(QWidget):
     SLINGSHOT_ARROWHEAD_LENGTH = 15
     SLINGSHOT_ARROWHEAD_ANGLE = pi / 4
 
-    def __init__(self, controller, debug=False):
-        super().__init__(controller)
+    def __init__(self, parent, controller, debug=False):
+        super().__init__(parent, Qt.Widget)
         self._logger = logging.getLogger(FieldView.__name__)
         if debug:
             self._logger.setLevel(logging.DEBUG)
         else:
             self._logger.setLevel(logging.INFO)
+        self._controller = controller
         self.tool_bar = QToolBar(self)
         self._action_lock_camera = QAction(self)
         self._action_delete_draws = QAction(self)
-        self.controller = controller
+        self.setCursor(Qt.OpenHandCursor)
+
         self.last_frame = 0
         self.graph_mobs = dict()
         self.graph_draw = dict()
@@ -52,7 +55,6 @@ class FieldView(QWidget):
         self.list_filter = ['None']
         self.graph_map = None
         self.multiple_points_map = dict()
-        self.setCursor(Qt.OpenHandCursor)
 
         # Option
         self.option_show_vector = False
@@ -63,7 +65,7 @@ class FieldView(QWidget):
         self._cursor_position = 0, 0
 
         # Thread Core
-        self._mutex = QMutex()
+        # self._mutex = QMutex()
         self.timer_screen_update = QTimer()
 
         # Frame
@@ -208,24 +210,24 @@ class FieldView(QWidget):
         max_robots_in_team = 16  # TODO : Variable globale?
 
         # Élément graphique pour les dessins
-        self.graph_draw['field-ground'] = self.controller.get_drawing_object('field-ground')()
+        self.graph_draw['field-ground'] = self._controller.get_drawing_object('field-ground')()
         self.graph_draw['field-ground'].show()
-        self.graph_draw['field-lines'] = self.controller.get_drawing_object('field-lines')()
+        self.graph_draw['field-lines'] = self._controller.get_drawing_object('field-lines')()
         self.graph_draw['field-lines'].show()
-        self.graph_draw['frame-rate'] = self.controller.get_drawing_object('frame-rate')()
+        self.graph_draw['frame-rate'] = self._controller.get_drawing_object('frame-rate')()
         self.graph_draw['frame-rate'].hide()
         self.graph_draw['robots_yellow'] = [list() for _ in range(max_robots_in_team)]
         self.graph_draw['robots_blue'] = [list() for _ in range(max_robots_in_team)]
 
         # Élément mobile graphique (Robots, balle et cible)
-        self.graph_mobs['ball'] = self.controller.get_drawing_object('ball')()
+        self.graph_mobs['ball'] = self._controller.get_drawing_object('ball')()
 
-        self.graph_mobs['robots_yellow'] = [self.controller.get_drawing_object('robot')(x, 'yellow')
+        self.graph_mobs['robots_yellow'] = [self._controller.get_drawing_object('robot')(x, 'yellow')
                                             for x in range(max_robots_in_team)]
-        self.graph_mobs['robots_blue'] = [self.controller.get_drawing_object('robot')(x, 'blue')
+        self.graph_mobs['robots_blue'] = [self._controller.get_drawing_object('robot')(x, 'blue')
                                           for x in range(max_robots_in_team)]
 
-        self.graph_mobs['target'] = self.controller.get_drawing_object('target')()
+        self.graph_mobs['target'] = self._controller.get_drawing_object('target')()
         # TODO : show // init setters
 
     def delete_all_draw(self):
@@ -306,7 +308,7 @@ class FieldView(QWidget):
     def auto_toggle_visible_target(self):
         """ Met à jour la vue de la cible en fonction des onglets ouverts """
         # TODO refaire en passant par une méthode du MainController
-        if self.controller.view_controller.isVisible() and self.controller.view_controller.page_tactic.isVisible():
+        if self._controller.view_controller.isVisible() and self._controller.view_controller.page_tactic.isVisible():
             self.graph_mobs['target'].show()
         else:
             self.graph_mobs['target'].hide()
@@ -384,11 +386,12 @@ class FieldView(QWidget):
     # noinspection PyPep8Naming
     def mousePressEvent(self, event):
         """ Gère l'événement du clic simple de la souris """
-        if self.controller.get_tactic_controller_is_visible():
+        if self._controller.get_tactic_controller_is_visible():
             distance, robot_id, team_color, mob = self.get_nearest_mob_from_position(event.pos().x(), event.pos().y())
-            if distance < mob.radius * QtToolBox.field_ctrl.ratio_screen and team_color == self.controller.get_team_color():
+            if distance < mob.radius * QtToolBox.field_ctrl.ratio_screen and\
+                    team_color == self._controller.get_team_color():
                 self.select_robot(robot_id, team_color)
-                self.controller.force_tactic_controller_select_robot(robot_id, team_color)
+                self._controller.force_tactic_controller_select_robot(robot_id, team_color)
 
     # noinspection PyPep8Naming
     def mouseDoubleClickEvent(self, event):
@@ -400,24 +403,24 @@ class FieldView(QWidget):
             if event.buttons() == Qt.RightButton:
                 if QApplication.keyboardModifiers() == Qt.ControlModifier and self.selected_mob is not None:
                     direction = self.selected_mob.position[2]
-                    team_color_is_yellow = "yellow" == self.controller.get_team_color()
-                    self.controller.grsim_sender.send_robot_position(x, y, direction, self.selected_mob.id,
-                                                                     team_color_is_yellow)
+                    team_color_is_yellow = "yellow" == self._controller.get_team_color()
+                    self._controller.grsim_sender.send_robot_position(x, y, direction, self.selected_mob.id,
+                                                                      team_color_is_yellow)
                 else:
-                    self.controller.grsim_sender.send_ball_position((x, y))
+                    self._controller.grsim_sender.send_ball_position((x, y))
             # If we are playing with tactics we handle double left click
             elif event.buttons() == Qt.LeftButton \
-                    and self.controller.view_controller.isVisible() \
-                    and self.controller.view_controller.page_tactic.isVisible():
-                self.controller.model_dataout.target = (x, y)
+                    and self._controller.view_controller.isVisible() \
+                    and self._controller.view_controller.page_tactic.isVisible():
+                self._controller.model_dataout.target = (x, y)
                 self.graph_mobs['target'].setPos(x, y)
 
     # noinspection PyPep8Naming
     def mouseReleaseEvent(self, _):
         """ Gère l'événement de relâchement de la touche de la souris """
         if self.slingshot_mode:
-            self.controller.grsim_sender.send_ball_position((self.graph_mobs['ball'].x, self.graph_mobs['ball'].y),
-                                                            self.compute_slingshot_speed_vector())
+            self._controller.grsim_sender.send_ball_position((self.graph_mobs['ball'].x, self.graph_mobs['ball'].y),
+                                                             self.compute_slingshot_speed_vector())
             self.slingshot_mode = False
             self.slingshot_distance_lock = False
         if not QtToolBox.field_ctrl.camera_is_locked():
@@ -524,11 +527,11 @@ class FieldView(QWidget):
     def get_teams_formation(self):
         teams_formation = []
 
-        def wrap_visible_mob(teams_formation, mobs, is_team_yellow):
+        def wrap_visible_mob(_teams_formation, mobs, is_team_yellow):
             for mob in mobs:
                 if mob.isVisible():
                     x, y, theta = mob.position
-                    teams_formation.append((x, y, theta, mob.id, is_team_yellow))
+                    _teams_formation.append((x, y, theta, mob.id, is_team_yellow))
 
         wrap_visible_mob(teams_formation, self.graph_mobs['robots_yellow'], is_team_yellow=True)
         wrap_visible_mob(teams_formation, self.graph_mobs['robots_blue'], is_team_yellow=False)

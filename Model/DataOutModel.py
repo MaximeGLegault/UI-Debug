@@ -2,14 +2,14 @@
 
 from PyQt5.QtCore import QTimer
 
-from Model.DataObject.SendingData.SendingAutoPlay import SendingAutoPlay
-from Model.DataObject.SendingData.SendingStrategy import SendingStrategy
-from Model.DataObject.SendingData.SendingToggleHumanCtrl import SendingToggleHumanCtrl
-from Model.DataObject.SendingData.SendingTactic import SendingTactic
-from Model.DataObject.SendingData.SendingHandShake import SendingHandShake
-from Model.DataObject.SendingData.SendingGeometry import SendingGeometry
 from Model.DataObject.SendingData.SendingAIServer import SendingAIServer
+from Model.DataObject.SendingData.SendingAutoPlay import SendingAutoPlay
 from Model.DataObject.SendingData.SendingDataPorts import SendingDataPorts
+from Model.DataObject.SendingData.SendingGeometry import SendingGeometry
+from Model.DataObject.SendingData.SendingHandShake import SendingHandShake
+from Model.DataObject.SendingData.SendingStrategy import SendingStrategy
+from Model.DataObject.SendingData.SendingTactic import SendingTactic
+from Model.DataObject.SendingData.SendingToggleHumanCtrl import SendingToggleHumanCtrl
 from Model.DataObject.SendingData.SendingUDPConfig import SendingUDPConfig
 
 __author__ = 'RoboCupULaval'
@@ -22,6 +22,7 @@ class DataOutModel:
         self.target = 0, 0
 
         self.frame_timer = QTimer()
+        # noinspection PyUnresolvedReferences
         self.frame_timer.timeout.connect(self.update_screen)
         self.frame_timer.start(30)  # C'est quoi ca? c'était à 20
 
@@ -87,6 +88,6 @@ class DataOutModel:
 
     def send_udp_config(self, udp_config_info):
         pkg = SendingUDPConfig().set_data(ip=udp_config_info['ip'],
-                                         port=int(udp_config_info['port']))
+                                          port=int(udp_config_info['port']))
         if self._udp_sender is not None:
             self._udp_sender.send_message(pkg.get_binary())

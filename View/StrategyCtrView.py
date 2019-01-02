@@ -33,9 +33,9 @@ class StrategyCtrView(QWidget):
     NO_STRAT_LABEL = 'Aucune Stratégie disponible'
     NO_TACTIC_LABEL = 'Aucune Tactique disponible'
 
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         QWidget.__init__(self, parent)
-        self.parent = parent
+        self._controller = controller
         self.play_info = None
 
         self.init_ui()
@@ -71,7 +71,7 @@ class StrategyCtrView(QWidget):
         self._layout = self.main_layout
 
         # Change background color to team's color
-        bg_color = QColor("#3498db") if self.parent.team_color == "blue" else QColor("#f1c40f")
+        bg_color = QColor("#3498db") if self._controller.team_color == "blue" else QColor("#f1c40f")
         self._reset_background_color_to(bg_color)
 
         # Création du contenu des pages
@@ -228,35 +228,35 @@ class StrategyCtrView(QWidget):
 
     @pyqtSlot(int)
     def handle_selection_robot_event_id(self, index):
-        self.parent.deselect_all_robots()
-        self.parent.select_robot(index, self.parent.get_team_color())
+        self._controller.deselect_all_robots()
+        self._controller.select_robot(index, self._controller.get_team_color())
 
     @pyqtSlot(int)
     def handle_selection_robot_event_team(self, index):
-        self.parent.deselect_all_robots()
-        self.parent.select_robot(self.selectRobot.currentIndex(), self.parent.get_team_color())
+        self._controller.deselect_all_robots()
+        self._controller.select_robot(self.selectRobot.currentIndex(), self._controller.get_team_color())
 
     @pyqtSlot(int)
     def tab_selected(self, index):
         if index == 0 or index == 1:
-            self.parent.deselect_all_robots()
+            self._controller.deselect_all_robots()
         elif index == 2:
             id_bot = self.selectRobot.currentIndex()
-            self.parent.select_robot(id_bot, self.parent.get_team_color())
+            self._controller.select_robot(id_bot, self._controller.get_team_color())
 
     @pyqtSlot(str)
     def handle_team_color(self, team_color):
         self._active_team = team_color.lower()
-        self.teamColorLabel.setText(self.parent.get_team_color().capitalize())
+        self.teamColorLabel.setText(self._controller.get_team_color().capitalize())
 
     def hideEvent(self, event):
-        self.parent.deselect_all_robots()
+        self._controller.deselect_all_robots()
         super().hideEvent(event)
 
     def keyPressEvent(self, event):
         key = event.key()
 
-        pos = self.parent.view_field_screen.mapFromGlobal(QCursor.pos())
+        pos = self._controller.view_field_screen.mapFromGlobal(QCursor.pos())
         if key == QtCore.Qt.Key_Plus:
             QtToolBox.field_ctrl.zoom(pos.x(), pos.y(), QtToolBox.field_ctrl.scroll_slowing_factor)
         elif key == QtCore.Qt.Key_Minus:
@@ -285,8 +285,8 @@ class StrategyCtrView(QWidget):
         self.setPalette(palette)
 
     def update_combobox(self):
-        if self.parent.model_datain._data_STA_config is not None:
-            data = self.parent.model_datain._data_STA_config.data
+        if self._controller.model_datain._data_STA_config is not None:
+            data = self._controller.model_datain._data_STA_config.data
 
             if data['tactic'] is not None:
                 tactics = self.get_tactic_list()
@@ -424,7 +424,7 @@ class StrategyCtrView(QWidget):
                 self.optional_roles[r].setEnabled(self.page_strat_use_role.isChecked())
 
     def _send_strategy(self, strategy_name, role=None):
-        self.parent.model_dataout.send_strategy(strategy_name, self.parent.get_team_color(), role)
+        self._controller.model_dataout.send_strategy(strategy_name, self._controller.get_team_color(), role)
 
     def send_quick_strat1(self):
         if len(self.strat_default) > 0:
@@ -453,7 +453,7 @@ class StrategyCtrView(QWidget):
                 self._reset_background_color_to(bg_color)
                 return
             else:
-                bg_color = QColor("#3498db") if self.parent.team_color == "blue" else QColor("#f1c40f")
+                bg_color = QColor("#3498db") if self._controller.team_color == "blue" else QColor("#f1c40f")
                 self._reset_background_color_to(bg_color)
         else:
             roles = None
@@ -469,16 +469,16 @@ class StrategyCtrView(QWidget):
     def send_tactic(self, tactic: str):
         id_bot = int(self.selectRobot.currentText())
         args_textbox = str(self.argumentsLine.text()).split()
-        target = self.parent.model_dataout.target
-        self.parent.model_dataout.send_tactic(id_bot, self.parent.get_team_color(), tactic=tactic, target=target, args=args_textbox)
+        target = self._controller.model_dataout.target
+        self._controller.model_dataout.send_tactic(id_bot, self._controller.get_team_color(), tactic=tactic, target=target, args=args_textbox)
 
     def send_tactic_stop(self):
         id_bot = int(self.selectRobot.currentText())
-        self.parent.model_dataout.send_tactic(id_bot, self.parent.get_team_color(), 'Stop', args=None)
+        self._controller.model_dataout.send_tactic(id_bot, self._controller.get_team_color(), 'Stop', args=None)
 
     def send_tactic_stop_all(self):
         for id_bot in range(MAX_NUMBER_ROBOTS):  # TODO (pturgeon): Changer pour constante globable (ou liste?)
-            self.parent.model_dataout.send_tactic(id_bot, self.parent.get_team_color(), 'Stop', args=None)
+            self._controller.model_dataout.send_tactic(id_bot, self._controller.get_team_color(), 'Stop', args=None)
 
     def send_strat_stop(self):
         self._send_strategy('DoNothing')
@@ -488,13 +488,13 @@ class StrategyCtrView(QWidget):
             self.hide()
         else:
             self.show()
-        self.parent.resize_window()
+        self._controller.resize_window()
 
     def send_start_auto(self):
-        self.parent.model_dataout.send_auto_play(True)
+        self._controller.model_dataout.send_auto_play(True)
 
     def send_stop_auto(self):
-        self.parent.model_dataout.send_auto_play(False)
+        self._controller.model_dataout.send_auto_play(False)
 
     # noinspection PyPackageRequirements
     def _populate_play_info(self):
@@ -505,7 +505,7 @@ class StrategyCtrView(QWidget):
 
         self.teamColorRow = QTreeWidgetItem(self.treeWidget)
         self.teamColorRow.setText(0, "Our color")
-        self.teamColorRow.setText(1, self.parent.get_team_color().capitalize())
+        self.teamColorRow.setText(1, self._controller.get_team_color().capitalize())
 
         self.refereeInfo = QTreeWidgetItem(self.treeWidget)
         self.refereeInfo.setText(0, "Referee info")
@@ -582,8 +582,8 @@ class StrategyCtrView(QWidget):
                                           self.teamInfo[team]["timeout_time"])
             self.teamInfo[team]["item"].setExpanded(True)
 
-        if self.parent.get_team_color() != self._active_team:
-            self._active_team = self.parent.get_team_color()
+        if self._controller.get_team_color() != self._active_team:
+            self._active_team = self._controller.get_team_color()
             self.teamColorRow.setText(1, self._active_team.capitalize())
 
         
@@ -591,7 +591,7 @@ class StrategyCtrView(QWidget):
     def update_play_info(self):
         while True:
 
-            self.play_info = self.parent.waiting_for_play_info()
+            self.play_info = self._controller.waiting_for_play_info()
 
             self.page_autonomous_but_stop.setVisible(self.play_info['auto_flag'])
             self.page_autonomous_but_play.setVisible(not self.play_info['auto_flag'])
