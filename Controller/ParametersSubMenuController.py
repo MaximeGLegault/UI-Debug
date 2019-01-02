@@ -1,10 +1,11 @@
 # Under MIT License, see LICENSE.txt
+
+__author__ = 'RobocupULaval'
+
 from typing import Dict
 
-from Communication.VisionUDPConfig import VisionUDPConfig
 import Controller
 from Model.DataOutModel import DataOutModel
-from Util.config import Config
 
 
 class ParametersSubMenuController:
@@ -15,12 +16,10 @@ class ParametersSubMenuController:
         self._default_vision_ip_address = self._communication_config['vision_address']
         self._default_vision_port = self._communication_config['vision_port']
 
-        self.udp_config = VisionUDPConfig(port=self._communication_config["vision_port"])
-
     def send_udp_config(self):
         udp_config_info = dict(zip(['ip', 'port'],
-                                   [self.udp_config.ip,
-                                    self.udp_config.port]))
+                                   [self._communication_config['vision_address'],
+                                    self._communication_config['vision_port']]))
         self._model_dataout.send_udp_config(udp_config_info)
 
     @property

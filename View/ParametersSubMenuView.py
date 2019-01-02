@@ -17,10 +17,12 @@ class ParametersSubMenuView(QDialog):
         super().__init__(parent, Qt.Dialog)
         self._controller = controller
         self._own_controller = own_controller
+
         self._layout = QVBoxLayout()
         self.tabs_widget = QTabWidget(self)
         self._dimensions_tab = QWidget(self, Qt.Widget)
         self._network_tab = QWidget(self, Qt.Widget)
+
         self.init_ui()
         self.init_network_tab()
         self.init_dimension_tab()
