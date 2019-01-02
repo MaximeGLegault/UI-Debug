@@ -1,4 +1,5 @@
 # Under MIT License, see LICENSE.txt
+from Controller import FieldController
 
 __author__ = 'RobocupULaval'
 
@@ -9,8 +10,10 @@ from Model.DataOutModel import DataOutModel
 
 
 class ParametersSubMenuController:
-    def __init__(self, main_controller: Controller, model_dataout: DataOutModel, communication_config: Dict):
+    def __init__(self, main_controller: Controller, field_controller: FieldController, model_dataout: DataOutModel,
+                 communication_config: Dict):
         self._main_controller = main_controller
+        self._field_controller = field_controller
         self._model_dataout = model_dataout
         self._communication_config = communication_config
         self._default_vision_ip_address = self._communication_config['vision_address']

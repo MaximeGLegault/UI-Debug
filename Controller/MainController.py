@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt
 from Communication.GrSimReplacementSender import GrSimReplacementSender
 from Communication.UDPServer import UDPServer
 from Communication.vision import Vision
+from Controller.FieldController import FieldController
 from Controller.ParametersSubMenuController import ParametersSubMenuController
 from Model.DataInModel import DataInModel
 from Model.DataOutModel import DataOutModel
@@ -64,7 +65,8 @@ class MainController:
         self.model_recorder = RecorderModel()
 
         # Création des sous-controllers
-        self.parameters_submenu_controller = ParametersSubMenuController(self, self.model_dataout,
+        self.field_controller = FieldController()
+        self.parameters_submenu_controller = ParametersSubMenuController(self, self.field_controller, self.model_dataout,
                                                                          self.config['COMMUNICATION'])
 
         self.main_view = MainView(self)

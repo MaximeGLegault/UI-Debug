@@ -70,8 +70,10 @@ class MainView(QWidget):
         help_menu = view_menu.addMenu('Aide')
         shortcuts_action = QAction('Raccourcis', self)
         help_action = QAction('À propos', self)
-        # shortcuts_action.triggered.connect(self.set_shorcuts_message_box)
-        # help_action.triggered.connect(self.set_about_message_box)
+        # noinspection PyUnresolvedReferences
+        shortcuts_action.triggered.connect(self.set_shorcuts_message_box)
+        # noinspection PyUnresolvedReferences
+        help_action.triggered.connect(self.set_about_message_box)
         help_menu.addAction(shortcuts_action)
         help_menu.addAction(help_action)
 
