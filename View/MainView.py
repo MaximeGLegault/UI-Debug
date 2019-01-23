@@ -5,6 +5,8 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QWidget, QSplitter, QVBoxLayout, QHBoxLayout, QPushButton, QMenuBar, QAction, QMessageBox
 
 from Controller import MainController
+from View.FieldView import FieldView
+from View.GameStateView import GameStateView
 from View.ParametersSubMenuView import ParametersSubMenuView
 
 
@@ -12,14 +14,15 @@ class MainView(QWidget):
 
     def __init__(self, controller: MainController):
         super().__init__(None, Qt.Widget)
-        self._controller = controller
+        self._controller: MainController = controller
 
-        self.view_param = ParametersSubMenuView(self, self._controller, self._controller.parameters_submenu_controller)
+        self.parameters_submenu_view = ParametersSubMenuView(self, self._controller, self._controller.parameters_submenu_controller)
+        self.gamefield_view = FieldView(self, self._controller, self._controller.field_controller)
+        self.gamestate_view = GameStateView(self, self._controller)
         self.init_ui()
 
-    # noinspection PyArgumentList
     def init_ui(self):
-        self.setWindowTitle('RoboCup ULaval | GUI Debug | Team ' + 'blue')
+        self.setWindowTitle('RoboCup ULaval | GUI Debug | Team ' + self._controller.get_team_color())
         self.setWindowIcon(QIcon('Img/favicon.jpg'))
         self.resize(975, 550)
 
@@ -42,10 +45,11 @@ class MainView(QWidget):
         under_the_field_buttons_layout.setContentsMargins(0, 0, 0, 0)
         under_the_field_buttons_widget.setLayout(under_the_field_buttons_layout)
 
-        # field_layout.addWidget(self.view_field_screen)
+        field_layout.addWidget(self.gamefield_view)
         field_layout.addWidget(under_the_field_buttons_widget)
         field_widget.setLayout(field_layout)
 
+        sub_layout.addWidget(self.gamestate_view)
         sub_layout.addWidget(field_widget)
 
         QSplitter.setSizes(sub_layout, [200, 500, 100, 100])
@@ -80,7 +84,7 @@ class MainView(QWidget):
         # => Menu Fichier
 
         param_action = QAction('Paramètres', self)
-        param_action.triggered.connect(self.view_param.show)
+        param_action.triggered.connect(self.parameters_submenu_view.show)
         file_menu.addAction(param_action)
 
         file_menu.addSeparator()
@@ -165,8 +169,8 @@ class MainView(QWidget):
 
         rob_state_action = QAction('État des robots', self)
         rob_state_action.setCheckable(True)
-        # rob_state_action.triggered.connect(self.view_robot_state.show_hide)
-        # rob_state_action.trigger()
+        rob_state_action.triggered.connect(self.gamestate_view.show_hide)
+        rob_state_action.trigger()
         tool_menu.addAction(rob_state_action)
 
         logger_action = QAction('Loggeur', self)

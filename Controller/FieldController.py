@@ -39,9 +39,7 @@ class FieldLineSegment:
 # it shouldn't be a singleton at all.
 class FieldController(metaclass=Singleton):
     """ La classe Field représente les informations relatives au terrain et ce qui s'y trouve """
-
     def __init__(self):
-
         # Paramètre caméra
         self._camera_position = [0, 0]
         self._camera_speed = 50

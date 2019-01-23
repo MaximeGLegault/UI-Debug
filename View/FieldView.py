@@ -13,19 +13,19 @@ from PyQt5.QtWidgets import QWidget, QToolBar, QAction, QSizePolicy, QApplicatio
 
 from Controller.DrawingObject.InfluenceMapDrawing import InfluenceMapDrawing
 from Controller.DrawingObject.MultiplePointsDrawing import MultiplePointsDrawing
+from Controller.FieldController import FieldController
+from Controller import MainController
 from Controller.QtToolBox import QtToolBox
 from Util.position import Position
 
 __author__ = 'RoboCupULaval'
 
 
-# noinspection PyArgumentList,PyUnresolvedReferences
 class FieldView(QWidget):
     """
     FieldView est un QWidget qui représente la vue du terrain et des éléments qui y sont associés.
     """
     FRAME_RATE = 30
-
     # Ball Slingshot
     MAX_SLINGSHOT_DISTANCE = 2000
     SLINGSHOT_COLOR_SCALE_DISTANCE_START = 500  # Green ->
@@ -35,7 +35,7 @@ class FieldView(QWidget):
     SLINGSHOT_ARROWHEAD_LENGTH = 15
     SLINGSHOT_ARROWHEAD_ANGLE = pi / 4
 
-    def __init__(self, parent, controller, debug=False):
+    def __init__(self, parent, controller: MainController, own_controller: FieldController, debug=False):
         super().__init__(parent, Qt.Widget)
         self._logger = logging.getLogger(FieldView.__name__)
         if debug:
@@ -43,6 +43,7 @@ class FieldView(QWidget):
         else:
             self._logger.setLevel(logging.INFO)
         self._controller = controller
+        self._own_controller = own_controller
         self.tool_bar = QToolBar(self)
         self._action_lock_camera = QAction(self)
         self._action_delete_draws = QAction(self)
@@ -78,7 +79,7 @@ class FieldView(QWidget):
         self.init_view_event()
         self.init_tool_bar()
         self._init_logger()
-        self.show()
+        # self.show()
 
         # Selected mob
         self.selected_mob = None
@@ -94,6 +95,7 @@ class FieldView(QWidget):
 
     def init_view_event(self):
         """ Initialise les boucles de rafraîchissement des dessins """
+        # noinspection PyUnresolvedReferences
         self.timer_screen_update.timeout.connect(self.emit_painting_signal)
         self.timer_screen_update.start((1 / self.FRAME_RATE) * 1000)
 
@@ -108,12 +110,14 @@ class FieldView(QWidget):
         """ Initialisation de la barre d'outils de la vue du terrain """
         self.tool_bar.setOrientation(Qt.Horizontal)
 
+        # noinspection PyUnresolvedReferences
         self._action_lock_camera.triggered.connect(self.toggle_lock_camera)
         # self.toggle_lock_camera()
         self.tool_bar.addAction(self._action_lock_camera)
 
         self._action_delete_draws.setToolTip('Effacer tous les dessins')
         self._action_delete_draws.setIcon(QIcon('Img/map_delete.png'))
+        # noinspection PyUnresolvedReferences
         self._action_delete_draws.triggered.connect(self.delete_all_draw)
         self.tool_bar.addAction(self._action_delete_draws)
 
@@ -388,7 +392,7 @@ class FieldView(QWidget):
         """ Gère l'événement du clic simple de la souris """
         if self._controller.get_tactic_controller_is_visible():
             distance, robot_id, team_color, mob = self.get_nearest_mob_from_position(event.pos().x(), event.pos().y())
-            if distance < mob.radius * QtToolBox.field_ctrl.ratio_screen and\
+            if distance < mob.radius * QtToolBox.field_ctrl.ratio_screen and \
                     team_color == self._controller.get_team_color():
                 self.select_robot(robot_id, team_color)
                 self._controller.force_tactic_controller_select_robot(robot_id, team_color)
@@ -401,6 +405,7 @@ class FieldView(QWidget):
             x, y = QtToolBox.field_ctrl.convert_screen_to_real_pst(event.pos().x(), event.pos().y())
 
             if event.buttons() == Qt.RightButton:
+                # noinspection PyArgumentList
                 if QApplication.keyboardModifiers() == Qt.ControlModifier and self.selected_mob is not None:
                     direction = self.selected_mob.position[2]
                     team_color_is_yellow = "yellow" == self._controller.get_team_color()
@@ -489,7 +494,7 @@ class FieldView(QWidget):
         clamped_distance = min(max(slingshot_vector.norm, self.SLINGSHOT_COLOR_SCALE_DISTANCE_START),
                                self.SLINGSHOT_COLOR_SCALE_DISTANCE_END)
         hue = (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - clamped_distance) / (
-                    3.0 * (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - self.SLINGSHOT_COLOR_SCALE_DISTANCE_START))
+                3.0 * (self.SLINGSHOT_COLOR_SCALE_DISTANCE_END - self.SLINGSHOT_COLOR_SCALE_DISTANCE_START))
         color = colorsys.hsv_to_rgb(hue, 1, 255)  # hue : Green = 1/3, Red = 0
         painter.setPen(QPen(QColor(*color), 3, Qt.SolidLine))
 

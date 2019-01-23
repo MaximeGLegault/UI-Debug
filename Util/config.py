@@ -34,7 +34,7 @@ class Config:
             return
 
         # Has already blue teamcolor/ports by default
-        if self['COACH']['team_color'] == 'yellow':
+        if team_color == 'yellow':
             self['COACH']['team_color'] = 'yellow'
             self['COACH']['ui_cmd_sender_port'] = self['COACH']['yellow_team_sender_port']
             self['COACH']['ui_cmd_receiver_port'] = self['COACH']['yellow_team_receiver_port']
@@ -56,7 +56,7 @@ class Config:
                 'referee_port': 10023,
                 'ui_cmd_sender_port': 14444,
                 'ui_cmd_receiver_port': 15555,
-                # DO NOT TOUCH EVER THEY ARE HARDCODED BOTH IN THE IA AND IN UI-DEBUG
+                # DO NOT EVER TOUCH THE NEXT FOUR ENTRIES, THEY ARE HARDCODED BOTH IN THE IA AND IN UI-DEBUG
                 'blue_team_sender_port': 14444,
                 'blue_team_receiver_port': 15555,
                 'yellow_team_sender_port': 16666,

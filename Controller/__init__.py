@@ -2,6 +2,6 @@
 
 __author__ = 'RoboCupULaval'
 
-from Controller import MainController
-from Controller import ParametersSubMenuController
-from Controller import FieldController
+from Controller.MainController import MainController
+from Controller.ParametersSubMenuController import ParametersSubMenuController
+from Controller.FieldController import FieldController

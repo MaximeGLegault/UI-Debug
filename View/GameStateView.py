@@ -1,24 +1,20 @@
 # Under MIT License, see LICENSE.txt
+import collections
 import logging
 
-import collections
 from PyQt5.QtCore import QThread, QTimer
-from PyQt5.QtWidgets import QProgressBar
+from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtWidgets import QTreeWidget
 from PyQt5.QtWidgets import QTreeWidgetItem
-from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QScrollArea, QPlainTextEdit, QPushButton, QVBoxLayout, QHBoxLayout, QGroupBox, QTextEdit
-from PyQt5.QtCore import Qt, QRect
-
+from PyQt5.QtWidgets import QWidget, QGridLayout, QScrollArea
 
 __author__ = 'RoboCupULaval'
-
-
 
 
 class GameStateView(QWidget):
 
     def __init__(self, parent, controller, debug=False):
-        super().__init__(parent)
+        super().__init__(parent, Qt.Widget)
         self._logger = logging.getLogger(GameStateView.__name__)
         if debug:
             self._logger.setLevel(logging.DEBUG)
@@ -43,14 +39,16 @@ class GameStateView(QWidget):
         self._logger.debug('CONSTRUCT: ... End')
 
         self.update_timer = QTimer()
+        # noinspection PyUnresolvedReferences
         self.update_timer.timeout.connect(self.redraw_callback)
         self.update_timer.start(300)
 
+    # noinspection PyMethodMayBeStatic
     def _get_style_sheet(self, team=None, bold=False, color='black'):
         param_sheet = ' ; '.join(['color:{}'.format(color),
-                                'border-style: solid',
-                                'border-color: black',
-                                'border-width: 1px'])
+                                  'border-style: solid',
+                                  'border-color: black',
+                                  'border-width: 1px'])
         if team is not None:
             if team == 'yellow':
                 color = '#ffff88'
@@ -86,16 +84,14 @@ class GameStateView(QWidget):
         self.scrollArea.setGeometry(QRect(0, 0, 390, 190))
         self.scrollArea.setWidgetResizable(True)
 
-
         self.treeWidget = QTreeWidget()
         self.treeWidget.setHeaderLabels(["Robots", ""])
         self.treeWidget.setColumnCount(2)
 
-        self.robots_state = {'yellow':{}, 'blue':{}}
+        self.robots_state = {'yellow': {}, 'blue': {}}
         self.prev_robots_state = {}
 
         self._populate_robot_state()
-
 
         self.scrollArea.setWidget(self.treeWidget)
         self._layout.addWidget(self.scrollArea)
@@ -197,13 +193,13 @@ class GameStateView(QWidget):
             # self.treeWidget.setItemWidget(subSubItem, 1, pbar)
 
             subSubItem = QTreeWidgetItem(subItem)
-            subSubItem.setText(0,"Role")
+            subSubItem.setText(0, "Role")
             subSubItem.setText(1, str(robot_state['role']))
             subSubItem = QTreeWidgetItem(subItem)
-            subSubItem.setText(0,"Tactic")
+            subSubItem.setText(0, "Tactic")
             subSubItem.setText(1, robot_state['tactic'])
             subSubItem = QTreeWidgetItem(subItem)
-            subSubItem.setText(0,"State")
+            subSubItem.setText(0, "State")
             subSubItem.setText(1, robot_state['state'])
             subItem.setExpanded(True)
 

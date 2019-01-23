@@ -1,26 +1,23 @@
 # Under MIT License, see LICENSE.txt
 
-import pickle
 import logging
+import pickle
+from threading import Thread, Event
 from time import time, sleep
 
-from threading import Thread, Event
-
+from Model.DataObject.AccessorData.FieldGeometryAcc import FieldGeometryAcc
+from Model.DataObject.AccessorData.GameStateAcc import GameStateAcc
+from Model.DataObject.AccessorData.HandShakeAcc import HandShakeAcc
+from Model.DataObject.AccessorData.PlayInfoAcc import PlayInfoAcc
 from Model.DataObject.AccessorData.PlotDataAcc import PlotDataAcc
 from Model.DataObject.AccessorData.RobotStateAcc import RobotStateAcc
-from Model.DataObject.AccessorData.TeamColorAcc import TeamColorAcc
-from Model.DataObject.AccessorData.PlayInfoAcc import PlayInfoAcc
-from Model.DataObject.AccessorData.StratGeneralAcc import StratGeneralAcc
-from Model.DataObject.AccessorData.FieldGeometryAcc import FieldGeometryAcc
 from Model.DataObject.AccessorData.RobotStrategicStateAcc import RobotStrategicStateAcc
-from Model.DataObject.AccessorData.GameStateAcc import GameStateAcc
+from Model.DataObject.AccessorData.StratGeneralAcc import StratGeneralAcc
+from Model.DataObject.AccessorData.TeamColorAcc import TeamColorAcc
 from Model.DataObject.AccessorData.VeryLargeDataAcc import VeryLargeDataAcc
 from Model.DataObject.DataFactory import DataFactory
 from Model.DataObject.DrawingData.BaseDataDraw import BaseDataDraw
 from Model.DataObject.LoggingData.BaseDataLog import BaseDataLog
-from Model.DataObject.AccessorData.HandShakeAcc import HandShakeAcc
-
-
 from .TimeListState.TimeListState import TimeListState
 
 __author__ = 'RoboCupULaval'
@@ -45,9 +42,11 @@ class DataInModel(Thread):
         self._robot_state = None
         self._robot_strategic_state = TimeListState('RobotState', dict(zip(['yellow', 'blue'],
                                                                            [dict(zip(list(range(16)),
-                                                                           [dict(zip(['tactic', 'action', 'target'],
-                                                                                    ['None', 'None', 'None'])) for _ in range(12)]
-                                                                           )) for _ in range(2)])))
+                                                                                     [dict(zip(
+                                                                                         ['tactic', 'action', 'target'],
+                                                                                         ['None', 'None', 'None'])) for
+                                                                                      _ in range(12)]
+                                                                                     )) for _ in range(2)])))
 
         self._game_state = TimeListState('GameState', {'yellow': 'None', 'blue': 'None'})
         self._data_config = list()
@@ -80,6 +79,9 @@ class DataInModel(Thread):
         # Contrôleur
         self._pause = False
 
+        # todo name this comment like other in the init
+        self._last_packet = None
+
         # Initialisations
         self._init_distributor()
         self._init_logger()
@@ -95,18 +97,18 @@ class DataInModel(Thread):
 
     def _init_distributor(self):
         """ Initialise la distribution des paquets en fonction du type de paquet """
-        self._distrib_specific_packet[VeryLargeDataAcc.__name__] = self._distrib_VeryLargeData
-        self._distrib_specific_packet[BaseDataDraw.__name__] = self._distrib_BaseDataDraw
-        self._distrib_specific_packet[StratGeneralAcc.__name__] = self._distrib_StratGeneral
-        self._distrib_specific_packet[BaseDataLog.__name__] = self._distrib_BaseDataLog
-        self._distrib_specific_packet[HandShakeAcc.__name__] = self._distrib_HandShake
-        self._distrib_specific_packet[RobotStrategicStateAcc.__name__] = self._distrib_RobotStrategicState
-        self._distrib_specific_packet[GameStateAcc.__name__] = self._distrib_GameState
-        self._distrib_specific_packet[FieldGeometryAcc.__name__] = self._distrib_FieldGeometry
-        self._distrib_specific_packet[TeamColorAcc.__name__] = self._distrib_TeamColor
-        self._distrib_specific_packet[RobotStateAcc.__name__] = self._distrib_RobotState
-        self._distrib_specific_packet[PlayInfoAcc.__name__] = self._distrib_PlayInfo
-        self._distrib_specific_packet[PlotDataAcc.__name__] = self._distrib_PlotData
+        self._distrib_specific_packet[VeryLargeDataAcc.__name__] = self._distribute_very_large_data
+        self._distrib_specific_packet[BaseDataDraw.__name__] = self._distribute_base_data_draw
+        self._distrib_specific_packet[StratGeneralAcc.__name__] = self._distribute_strat_general
+        self._distrib_specific_packet[BaseDataLog.__name__] = self._distribute_base_data_log
+        self._distrib_specific_packet[HandShakeAcc.__name__] = self._distribute_hand_shake
+        self._distrib_specific_packet[RobotStrategicStateAcc.__name__] = self._distribute_robot_strategic_state
+        self._distrib_specific_packet[GameStateAcc.__name__] = self._distribute_gamestate
+        self._distrib_specific_packet[FieldGeometryAcc.__name__] = self._distribute_field_geometry
+        self._distrib_specific_packet[TeamColorAcc.__name__] = self._distribute_team_color
+        self._distrib_specific_packet[RobotStateAcc.__name__] = self._distribute_robot_state
+        self._distrib_specific_packet[PlayInfoAcc.__name__] = self._distribute_play_info
+        self._distrib_specific_packet[PlotDataAcc.__name__] = self._distribute_plot_data
 
         self._logger.debug('INIT: Distributor')
 
@@ -136,47 +138,46 @@ class DataInModel(Thread):
         self._logger.debug('Thread RUNNING')
         while True:
             self.waiting_for_pause_event()
+            package = None
             try:
                 self._logger.debug('RUN: get Last data from udp server')
                 package = self._udp_receiver.waiting_for_last_data()
                 self._extract_and_distribute_data(package)
             except AttributeError as e:
-
-                self._logger.warn(type(e).__name__ + str(e))
+                self._logger.warning(type(e).__name__ + str(e))
             except TypeError:
                 pass
             finally:
                 self._last_packet = package[0] if package is not None else None
 
-        self._logger.debug('Thread RUN STOPPING')
+        # self._logger.debug('Thread RUN STOPPING')
 
     # === DISTRIBUTOR ===
 
-    def _distrib_FieldGeometry(self, data):
+    def _distribute_field_geometry(self):
         """ Traite le paque spécifique FieldGeometry """
         self._logger.debug('DISTRIB: FieldGeometry')
         self._controller.send_geometry()
 
-    def _distrib_GameState(self, data):
+    def _distribute_gamestate(self, data):
         """ Traite le paquet spécifique GameState """
         self._logger.debug('DISTRIB: GameState')
         self._game_state.append(data.data)
         self._event_game_state.set()
 
-
-    def _distrib_VeryLargeData(self, data):
+    def _distribute_very_large_data(self, data):
         """ Traite le paquet spécifique VeryLargeData """
         self._logger.debug('DISTRIB: VeryLargeData')
         data.store()
         self._extract_and_distribute_data(data.rebuild())
 
-    def _distrib_BaseDataDraw(self, data):
+    def _distribute_base_data_draw(self, data):
         """ Traite le paquet de type générique DataDraw """
         self._logger.debug('DISTRIB: BaseDataDraw')
-        #self._data_draw['notset'].append(data)
+        # self._data_draw['notset'].append(data)
         self.show_draw(data)
 
-    def _distrib_StratGeneral(self, data):
+    def _distribute_strat_general(self, data):
         """ Traite le paquet spécifique StratGeneral """
         self._logger.debug('DISTRIB: StratGeneral')
         if self._data_STA_config is not None:
@@ -185,40 +186,39 @@ class DataInModel(Thread):
         else:
             self._data_STA_config = data
 
-    def _distrib_BaseDataLog(self, data):
+    def _distribute_base_data_log(self, data):
         """ Traite le paquet de type générique BaseDataLog """
         self._logger.debug('DISTRIB: BaseDataLog')
         self._store_data_logging(data)
 
-    def _distrib_HandShake(self, data):
+    def _distribute_hand_shake(self):
         """ Traite le paquet spécifique HandShake """
         self._logger.debug('DISTRIB: HandShake')
         self._controller.send_handshake()
 
-    def _distrib_RobotStrategicState(self, data):
+    def _distribute_robot_strategic_state(self, data):
         """ Traite le paquet spécifique RobotState """
         self._logger.debug('DISTRIB: RobotStrategicState')
         self._robot_strategic_state.append(data.data.copy())
         self._event_robot_strategic_state.set()
 
-    def _distrib_TeamColor(self, data):
+    def _distribute_team_color(self, data):
         self._logger.debug('DISTRIB: TeamColor')
         self._team_color = data.data['team_color']
 
-    def _distrib_PlayInfo(self, data):
+    def _distribute_play_info(self, data):
         self._logger.debug('DISTRIB: AutoState')
         self._play_info.append(data.data.copy())
         self._event_play_info.set()
 
-    def _distrib_RobotState(self, data):
+    def _distribute_robot_state(self, data):
         self._logger.debug('DISTRIB: RobotState')
         self._robot_state = data.data.copy()
         self._event_robot_state.set()
 
-    def _distrib_PlotData(self, data):
+    def _distribute_plot_data(self, data):
         self._logger.debug('DISTRIB: RobotState')
         self._plot_data.append(data.data.copy())
-
 
     # === PRIVATE METHODS ===
 
@@ -238,7 +238,7 @@ class DataInModel(Thread):
                     else:
                         self._distrib_specific_packet[type(data).__name__](data)
                 except KeyError as e:
-                    self._logger.warn(type(e).__name__, e)
+                    self._logger.warning(type(e).__name__, e)
 
     def _store_data_logging(self, data):
         """ Stock les données de logging """
@@ -323,7 +323,7 @@ class DataInModel(Thread):
             self._logger.debug('TRIGGER: GET LOG')
             return self._data_logging[index:]
         else:
-            self._logger.warn('TRIGGER: GET LOG - No new log')
+            self._logger.warning('TRIGGER: GET LOG - No new log')
             return None
 
     def fetch_plot_data(self):
@@ -337,7 +337,7 @@ class DataInModel(Thread):
             self._logger.debug('TRIGGER: SHOW DRAW')
             self._controller.add_draw_on_screen(draw)
         else:
-            self._logger.warn('TRIGGER: SHOW DRAW not available object')
+            self._logger.warning('TRIGGER: SHOW DRAW not available object')
 
     def write_logging_file(self, path, text):
         """ Écrit le logging dans un fichier texte sur le path déterminé """
